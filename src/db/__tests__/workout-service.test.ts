@@ -22,6 +22,20 @@ async function setup () {
 }
 
 describe('start workout', () => {
+	it('enforces one active workout at the SQLite data layer', async () => {
+		const { db, service } = await setup()
+		const first = await service.startQuickWorkout('Первый')
+
+		await expect(
+			db.runAsync(
+				'INSERT INTO workouts (id, name, started_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?)',
+				['wo_direct', 'Второй', '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z'],
+			),
+		).rejects.toThrow()
+		expect((await service.getActiveDetail())?.workout.id).toBe(first.workout.id)
+		await db.closeAsync()
+	})
+
 	it('starts from template and blocks a second active workout', async () => {
 		const { db, service, templates } = await setup()
 		const template = await templates.create({ name: 'Грудь' })

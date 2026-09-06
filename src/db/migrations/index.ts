@@ -5,6 +5,7 @@
 import type { AppDatabase } from '../client'
 import { MIGRATION_001_SQL } from './001_initial_schema'
 import { MIGRATION_002_SQL } from './002_exercise_user_settings'
+import { MIGRATION_003_SQL } from './003_single_active_workout'
 import { nowIso } from '@/src/utils/dates'
 
 export type Migration = {
@@ -24,6 +25,11 @@ export const MIGRATIONS: readonly Migration[] = [
 		version: 2,
 		name: '002_exercise_user_settings',
 		sql: MIGRATION_002_SQL,
+	},
+	{
+		version: 3,
+		name: '003_single_active_workout',
+		sql: MIGRATION_003_SQL,
 	},
 ] as const
 

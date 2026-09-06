@@ -147,7 +147,7 @@ export class WorkoutRepository {
 		const rows = await this.db.getAllAsync<WorkoutRow>(
 			`SELECT * FROM workouts
 			 WHERE finished_at IS NOT NULL
-			 ORDER BY finished_at DESC`,
+			 ORDER BY finished_at DESC, started_at DESC, id DESC`,
 		)
 		return rows.map(mapWorkout)
 	}
@@ -286,9 +286,11 @@ export class WorkoutRepository {
 		if (!existing) {
 			throw new Error(`Workout exercise not found: ${id}`)
 		}
-		await this.db.runAsync('DELETE FROM workout_exercises WHERE id = ?', [id])
-		await this.renumberExercises(existing.workoutId)
-		await this.touchWorkout(existing.workoutId, nowIso())
+		await this.db.withTransactionAsync(async () => {
+			await this.db.runAsync('DELETE FROM workout_exercises WHERE id = ?', [id])
+			await this.renumberExercises(existing.workoutId)
+			await this.touchWorkout(existing.workoutId, nowIso())
+		})
 	}
 
 	async reorderWorkoutExercises (
@@ -442,12 +444,14 @@ export class WorkoutRepository {
 		if (!existing) {
 			throw new Error(`Set not found: ${id}`)
 		}
-		await this.db.runAsync('DELETE FROM sets WHERE id = ?', [id])
-		await this.renumberSets(existing.workoutExerciseId)
-		const we = await this.getWorkoutExerciseById(existing.workoutExerciseId)
-		if (we) {
-			await this.touchWorkout(we.workoutId, nowIso())
-		}
+		await this.db.withTransactionAsync(async () => {
+			await this.db.runAsync('DELETE FROM sets WHERE id = ?', [id])
+			await this.renumberSets(existing.workoutExerciseId)
+			const we = await this.getWorkoutExerciseById(existing.workoutExerciseId)
+			if (we) {
+				await this.touchWorkout(we.workoutId, nowIso())
+			}
+		})
 	}
 
 	/**
@@ -465,7 +469,7 @@ export class WorkoutRepository {
 			 WHERE w.finished_at IS NOT NULL
 			   AND w.started_at < ?
 			   AND we.exercise_id = ?
-			 ORDER BY w.finished_at DESC
+			 ORDER BY w.finished_at DESC, w.started_at DESC, w.id DESC
 			 LIMIT 1`,
 			[beforeStartedAt, exerciseId],
 		)

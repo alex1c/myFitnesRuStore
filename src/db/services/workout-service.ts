@@ -79,8 +79,6 @@ export class WorkoutService {
 	}
 
 	async startFromTemplate (templateId: string): Promise<WorkoutDetail> {
-		await this.ensureNoActiveWorkout()
-
 		const detail = await this.templates.getDetail(templateId)
 		if (!detail) {
 			throw new Error('Шаблон не найден')
@@ -88,6 +86,7 @@ export class WorkoutService {
 
 		let workoutId = ''
 		await this.db.withTransactionAsync(async () => {
+			await this.ensureNoActiveWorkout()
 			const workout = await this.workouts.createWorkout({
 				name: detail.template.name,
 				templateId: detail.template.id,
@@ -137,9 +136,13 @@ export class WorkoutService {
 	async startQuickWorkout (
 		name = 'Свободная тренировка',
 	): Promise<WorkoutDetail> {
-		await this.ensureNoActiveWorkout()
-		const workout = await this.workouts.createWorkout({ name })
-		const detail = await this.getDetail(workout.id)
+		let workoutId = ''
+		await this.db.withTransactionAsync(async () => {
+			await this.ensureNoActiveWorkout()
+			const workout = await this.workouts.createWorkout({ name })
+			workoutId = workout.id
+		})
+		const detail = await this.getDetail(workoutId)
 		if (!detail) {
 			throw new Error('Не удалось открыть тренировку')
 		}
@@ -156,28 +159,33 @@ export class WorkoutService {
 			throw new Error('Упражнение недоступно')
 		}
 
-		const workoutExercise = await this.workouts.addWorkoutExercise({
-			workoutId,
-			exerciseId,
+		let workoutExercise!: Awaited<
+			ReturnType<WorkoutRepository['addWorkoutExercise']>
+		>
+		let previous: WorkoutSet[] = []
+		await this.db.withTransactionAsync(async () => {
+			workoutExercise = await this.workouts.addWorkoutExercise({
+				workoutId,
+				exerciseId,
+			})
+			previous = await this.workouts.findPreviousCompletedSets(
+				exerciseId,
+				workout.startedAt,
+			)
+			const autofill = buildAutofillValues({
+				trackingType: exercise.trackingType,
+				currentCompletedSets: [],
+				previousSets: previous,
+				nextIndex: 0,
+			})
+			await this.workouts.createSet({
+				workoutExerciseId: workoutExercise.id,
+				position: 0,
+				setType: DEFAULT_SET_TYPE,
+				...autofill,
+				completedAt: null,
+			})
 		})
-		const previous = await this.workouts.findPreviousCompletedSets(
-			exerciseId,
-			workout.startedAt,
-		)
-		const autofill = buildAutofillValues({
-			trackingType: exercise.trackingType,
-			currentCompletedSets: [],
-			previousSets: previous,
-			nextIndex: 0,
-		})
-		await this.workouts.createSet({
-			workoutExerciseId: workoutExercise.id,
-			position: 0,
-			setType: DEFAULT_SET_TYPE,
-			...autofill,
-			completedAt: null,
-		})
-
 		const sets = await this.workouts.listSets(workoutExercise.id)
 		return {
 			workoutExercise,
