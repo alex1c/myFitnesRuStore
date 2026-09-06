@@ -1,5 +1,5 @@
 /**
- * Template detail / summary. No active workout start in Phase 2.
+ * Template detail / summary with Start workout action.
  */
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router'
 import React, { useCallback, useState } from 'react'
@@ -8,6 +8,7 @@ import { Alert, Pressable, StyleSheet, View } from 'react-native'
 import { AppText } from '@/src/components/app-text'
 import { Screen } from '@/src/components/screen'
 import { SurfaceCard } from '@/src/components/surface-card'
+import { ActiveWorkoutExistsError } from '@/src/db'
 import type { Exercise, TemplateExercise, WorkoutTemplate } from '@/src/domain/types'
 import {
 	formatDetailExerciseLine,
@@ -17,6 +18,7 @@ import {
 import {
 	useExerciseRepository,
 	useTemplateRepository,
+	useWorkoutService,
 } from '@/src/providers/database-provider'
 import { radius, spacing, touchTarget } from '@/src/theme'
 import { useThemeColors } from '@/src/theme/use-theme-colors'
@@ -32,6 +34,7 @@ export default function TemplateDetailScreen () {
 	const router = useRouter()
 	const templates = useTemplateRepository()
 	const exercisesRepo = useExerciseRepository()
+	const workouts = useWorkoutService()
 	const [template, setTemplate] = useState<WorkoutTemplate | null>(null)
 	const [rows, setRows] = useState<Row[]>([])
 
@@ -102,6 +105,58 @@ export default function TemplateDetailScreen () {
 		)
 	}
 
+	const handleStart = () => {
+		if (!template) {
+			return
+		}
+		if (rows.length === 0) {
+			Alert.alert(
+				'Добавьте упражнения',
+				'Сначала соберите шаблон в редакторе.',
+			)
+			return
+		}
+		void (async () => {
+			try {
+				const detail = await workouts.startFromTemplate(template.id)
+				router.push(`/workout/${detail.workout.id}`)
+			} catch (error) {
+				if (error instanceof ActiveWorkoutExistsError) {
+					Alert.alert(
+						'Уже есть активная тренировка',
+						error.activeWorkout.name,
+						[
+							{
+								text: 'Продолжить текущую',
+								onPress: () =>
+									router.push(`/workout/${error.activeWorkout.id}`),
+							},
+							{
+								text: 'Завершить текущую',
+								onPress: () => {
+									void workouts
+										.finishWorkout(error.activeWorkout.id)
+										.then(() =>
+											workouts.startFromTemplate(template.id),
+										)
+										.then((detail) =>
+											router.push(`/workout/${detail.workout.id}`),
+										)
+								},
+							},
+							{ text: 'Отмена', style: 'cancel' },
+						],
+					)
+					return
+				}
+				Alert.alert(
+					'Не удалось начать',
+					error instanceof Error ? error.message : 'Попробуйте ещё раз',
+				)
+			}
+		})()
+	}
+
 	if (!template) {
 		return (
 			<Screen>
@@ -155,7 +210,7 @@ export default function TemplateDetailScreen () {
 
 			<Pressable
 				accessibilityRole="button"
-				onPress={() => router.push(`/templates/edit/${template.id}`)}
+				onPress={handleStart}
 				style={({ pressed }) => [
 					styles.primary,
 					{
@@ -165,8 +220,16 @@ export default function TemplateDetailScreen () {
 				]}
 			>
 				<AppText variant="subtitle" style={{ color: palette.onPrimary }}>
-					Редактировать
+					Начать
 				</AppText>
+			</Pressable>
+
+			<Pressable
+				accessibilityRole="button"
+				onPress={() => router.push(`/templates/edit/${template.id}`)}
+				style={[styles.secondaryFull, { borderColor: palette.border }]}
+			>
+				<AppText>Редактировать</AppText>
 			</Pressable>
 
 			<View style={styles.rowActions}>
@@ -193,6 +256,13 @@ const styles = StyleSheet.create({
 	primary: {
 		minHeight: touchTarget.minHeight,
 		borderRadius: radius.md,
+		alignItems: 'center',
+		justifyContent: 'center',
+	},
+	secondaryFull: {
+		minHeight: touchTarget.minHeight,
+		borderRadius: radius.md,
+		borderWidth: StyleSheet.hairlineWidth,
 		alignItems: 'center',
 		justifyContent: 'center',
 	},

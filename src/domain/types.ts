@@ -128,6 +128,39 @@ export interface WorkoutSet {
 	updatedAt: string
 }
 
+export type WorkoutExerciseWithSets = {
+	workoutExercise: WorkoutExercise
+	exercise: Exercise | null
+	sets: WorkoutSet[]
+	previousSets: WorkoutSet[]
+}
+
+export type WorkoutDetail = {
+	workout: Workout
+	exercises: WorkoutExerciseWithSets[]
+}
+
+export type CreateSetInput = {
+	workoutExerciseId: string
+	position?: number
+	setType?: SetType
+	weight?: number | null
+	reps?: number | null
+	durationSeconds?: number | null
+	distance?: number | null
+	completedAt?: string | null
+}
+
+export type UpdateSetInput = Partial<{
+	setType: SetType
+	weight: number | null
+	reps: number | null
+	durationSeconds: number | null
+	distance: number | null
+	position: number
+	completedAt: string | null
+}>
+
 export type CreateExerciseInput = {
 	name: string
 	category?: ExerciseCategory | string

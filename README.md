@@ -87,6 +87,22 @@ Workout templates:
 
 Not in Phase 2: starting a workout, set logging, rest timer, notifications.
 
+## Phase 3
+
+Active workout logging:
+
+- start from template / quick workout
+- single active workout + resume after app kill
+- compact set logging with one-tap ✓
+- previous results by exercise id
+- auto-fill weight/reps (decimal comma)
+- tracking types + set types
+- add / replace / remove / reorder exercises mid-workout
+- finish → summary → history list/detail
+- discard with confirmation
+
+Not in Phase 3: rest countdown timer, notifications, PR/e1RM/tonnage, ads.
+
 ## Package
 
 - App name: `Мой спортзал`

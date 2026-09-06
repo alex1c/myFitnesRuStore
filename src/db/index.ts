@@ -13,3 +13,9 @@ export {
 } from './migrations'
 export { ExerciseRepository } from './repositories/exercise-repository'
 export { WorkoutTemplateRepository } from './repositories/workout-template-repository'
+export { WorkoutRepository } from './repositories/workout-repository'
+export {
+	ActiveWorkoutExistsError,
+	WorkoutService,
+	createWorkoutService,
+} from './services/workout-service'

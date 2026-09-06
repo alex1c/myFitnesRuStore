@@ -21,6 +21,7 @@ import {
 import {
 	ExerciseRepository,
 	initializeDatabase,
+	WorkoutService,
 	WorkoutTemplateRepository,
 	type AppDatabase,
 } from '@/src/db'
@@ -30,6 +31,7 @@ type DatabaseContextValue = {
 	db: AppDatabase
 	exercises: ExerciseRepository
 	templates: WorkoutTemplateRepository
+	workouts: WorkoutService
 	schemaVersion: number
 }
 
@@ -64,10 +66,10 @@ export function DatabaseProvider ({ children }: Props) {
 						schemaVersion,
 						exercises: new ExerciseRepository(db),
 						templates: new WorkoutTemplateRepository(db),
+						workouts: new WorkoutService(db),
 					},
 				})
 			} catch (error) {
-				// Log technical details for developers; never show stack to the user.
 				console.error('Database initialization failed', error)
 				if (!isActive) {
 					return
@@ -133,7 +135,6 @@ export function useDatabase (): DatabaseContextValue {
 	return value
 }
 
-/** Optional access when a screen can render before DB is ready (rare). */
 export function useDatabaseOptional (): DatabaseContextValue | null {
 	return useContext(DatabaseContext)
 }
@@ -145,6 +146,10 @@ export function useExerciseRepository (): ExerciseRepository {
 export function useTemplateRepository (): WorkoutTemplateRepository {
 	const { templates } = useDatabase()
 	return useMemo(() => templates, [templates])
+}
+
+export function useWorkoutService (): WorkoutService {
+	return useDatabase().workouts
 }
 
 const styles = StyleSheet.create({
