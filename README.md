@@ -58,18 +58,22 @@ npm run lint
 npm run typecheck
 ```
 
-## Phase 0 scope
+## Phase 0
 
-Foundation only:
+Foundation: navigation, design tokens, SQLite migrations, repositories, decimal utility, tests.
 
-- five-tab navigation (Сегодня / История / Прогресс / Упражнения / Ещё)
-- design tokens
-- versioned SQLite migrations + repositories
-- decimal input utility
-- meaningful unit tests
-- DB init error fallback
+## Phase 1
 
-Not in Phase 0: active workouts, rest timer, ads, analytics, cloud, auth, AI.
+Exercise library:
+
+- built-in catalog (**139** exercises, Russian names)
+- search + muscle filters
+- custom create / edit
+- per-exercise rest, weight step, notes
+- archive / restore for custom exercises
+- user settings for built-ins survive re-seed (`exercise_user_settings`)
+
+Not in Phase 1: active workouts, set logging, rest countdown, history charts, ads, cloud, AI.
 
 ## Package
 

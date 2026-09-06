@@ -1,5 +1,5 @@
 /**
- * Core domain model for Phase 0.
+ * Core domain model for exercises and workouts.
  * String unions stay open enough for future custom values where needed.
  */
 
@@ -31,10 +31,13 @@ export type MuscleGroup =
 	| 'shoulders'
 	| 'biceps'
 	| 'triceps'
+	| 'forearms'
 	| 'legs'
 	| 'glutes'
+	| 'calves'
 	| 'core'
 	| 'full_body'
+	| 'cardio'
 	| 'other'
 
 export type Equipment =
@@ -45,6 +48,7 @@ export type Equipment =
 	| 'bodyweight'
 	| 'kettlebell'
 	| 'band'
+	| 'cardio_machine'
 	| 'other'
 
 export interface Exercise {
@@ -54,8 +58,11 @@ export interface Exercise {
 	muscleGroup: MuscleGroup | string
 	equipment: Equipment | string
 	trackingType: TrackingType
+	/** Effective rest (user override coalesced over catalog default). */
 	defaultRestSeconds: number
+	/** Effective weight step (user override coalesced over catalog default). */
 	weightStep: number | null
+	/** Effective notes (user override coalesced over catalog default). */
 	notes: string | null
 	isCustom: boolean
 	createdAt: string
@@ -149,3 +156,6 @@ export type CreateWorkoutTemplateInput = {
 	description?: string | null
 	position?: number
 }
+
+/** Max length for exercise names shown/stored in the library. */
+export const EXERCISE_NAME_MAX_LENGTH = 80

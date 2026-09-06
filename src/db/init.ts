@@ -3,14 +3,17 @@
  */
 import type { AppDatabase } from './client'
 import { LATEST_SCHEMA_VERSION, runMigrations } from './migrations'
+import { seedBuiltinExercises } from './seed/seed-builtin-exercises'
 
 export type DatabaseInitResult = {
 	db: AppDatabase
 	schemaVersion: number
+	builtinExerciseCount: number
 }
 
 /**
  * Initialize an already-opened AppDatabase (used by tests with memory driver).
+ * Runs migrations, then idempotent built-in exercise seed.
  */
 export async function initializeProvidedDatabase (
 	db: AppDatabase,
@@ -23,5 +26,7 @@ export async function initializeProvidedDatabase (
 		)
 	}
 
-	return { db, schemaVersion }
+	const builtinExerciseCount = await seedBuiltinExercises(db)
+
+	return { db, schemaVersion, builtinExerciseCount }
 }

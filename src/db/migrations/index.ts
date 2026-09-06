@@ -4,6 +4,7 @@
  */
 import type { AppDatabase } from '../client'
 import { MIGRATION_001_SQL } from './001_initial_schema'
+import { MIGRATION_002_SQL } from './002_exercise_user_settings'
 import { nowIso } from '@/src/utils/dates'
 
 export type Migration = {
@@ -12,12 +13,17 @@ export type Migration = {
 	sql: string
 }
 
-/** Ordered list — append 002, 003, … here in later phases. */
+/** Ordered list — append 003, … here in later phases. */
 export const MIGRATIONS: readonly Migration[] = [
 	{
 		version: 1,
 		name: '001_initial_schema',
 		sql: MIGRATION_001_SQL,
+	},
+	{
+		version: 2,
+		name: '002_exercise_user_settings',
+		sql: MIGRATION_002_SQL,
 	},
 ] as const
 

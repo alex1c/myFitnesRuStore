@@ -105,6 +105,7 @@ export default function TabLayout () {
 				name="exercises"
 				options={{
 					title: 'Упражнения',
+					headerShown: false,
 					tabBarIcon: ({ color }) => (
 						<TabIcon
 							color={toColorString(color)}

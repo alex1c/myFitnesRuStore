@@ -22,12 +22,12 @@ async function setup () {
 }
 
 describe('database foundation', () => {
-	it('applies migration 001 and reports schema version 1', async () => {
+	it('applies migrations through 002 and reports schema version 2', async () => {
 		const { db, schemaVersion } = await setup()
 
-		expect(schemaVersion).toBe(1)
-		expect(LATEST_SCHEMA_VERSION).toBe(1)
-		expect(await getSchemaVersion(db)).toBe(1)
+		expect(schemaVersion).toBe(2)
+		expect(LATEST_SCHEMA_VERSION).toBe(2)
+		expect(await getSchemaVersion(db)).toBe(2)
 
 		const tables = await db.getAllAsync<{ name: string }>(
 			`SELECT name FROM sqlite_master
@@ -45,6 +45,8 @@ describe('database foundation', () => {
 				'workout_exercises',
 				'sets',
 				'schema_migrations',
+				'exercise_user_settings',
+				'app_meta',
 			]),
 		)
 
@@ -61,8 +63,9 @@ describe('database foundation', () => {
 		expect(second.schemaVersion).toBe(first.schemaVersion)
 
 		const listed = await exerciseRepo.list()
-		expect(listed).toHaveLength(1)
-		expect(listed[0]?.name).toBe('Жим лёжа')
+		expect(listed.some((item) => item.name === 'Жим лёжа' && item.isCustom)).toBe(
+			true,
+		)
 
 		await db.closeAsync()
 	})

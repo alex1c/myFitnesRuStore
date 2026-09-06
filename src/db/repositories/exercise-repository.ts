@@ -1,5 +1,5 @@
 /**
- * ExerciseRepository — minimal CRUD + soft archive for Phase 0 smoke checks.
+ * ExerciseRepository — library CRUD, soft archive, and per-exercise user settings.
  */
 import { assertTrackingType } from '@/src/domain/validation'
 import type {
@@ -7,6 +7,7 @@ import type {
 	Exercise,
 	UpdateExerciseInput,
 } from '@/src/domain/types'
+import { EXERCISE_NAME_MAX_LENGTH } from '@/src/domain/types'
 import type { AppDatabase } from '../client'
 import { createId } from '@/src/utils/id'
 import { nowIso } from '@/src/utils/dates'
@@ -27,6 +28,32 @@ type ExerciseRow = {
 	archived_at: string | null
 }
 
+/** SELECT that coalesces user overrides over catalog defaults. */
+const EXERCISE_SELECT = `
+	SELECT
+		e.id,
+		e.name,
+		e.category,
+		e.muscle_group,
+		e.equipment,
+		e.tracking_type,
+		COALESCE(s.default_rest_seconds, e.default_rest_seconds) AS default_rest_seconds,
+		CASE
+			WHEN s.exercise_id IS NOT NULL THEN s.weight_step
+			ELSE e.weight_step
+		END AS weight_step,
+		CASE
+			WHEN s.exercise_id IS NOT NULL THEN s.notes
+			ELSE e.notes
+		END AS notes,
+		e.is_custom,
+		e.created_at,
+		e.updated_at,
+		e.archived_at
+	FROM exercises e
+	LEFT JOIN exercise_user_settings s ON s.exercise_id = e.id
+`
+
 function mapRow (row: ExerciseRow): Exercise {
 	return {
 		id: row.id,
@@ -45,6 +72,23 @@ function mapRow (row: ExerciseRow): Exercise {
 	}
 }
 
+function normalizeName (raw: string): string {
+	return raw.trim().replace(/\s+/g, ' ')
+}
+
+export function validateExerciseName (raw: string): string {
+	const name = normalizeName(raw)
+	if (name.length === 0) {
+		throw new Error('Введите название упражнения')
+	}
+	if (name.length > EXERCISE_NAME_MAX_LENGTH) {
+		throw new Error(
+			`Название слишком длинное (макс. ${EXERCISE_NAME_MAX_LENGTH} символов)`,
+		)
+	}
+	return name
+}
+
 export class ExerciseRepository {
 	constructor (private readonly db: AppDatabase) {}
 
@@ -53,6 +97,7 @@ export class ExerciseRepository {
 		const timestamp = nowIso()
 		const trackingType = input.trackingType ?? 'weight_reps'
 		assertTrackingType(trackingType)
+		const name = validateExerciseName(input.name)
 
 		await this.db.runAsync(
 			`INSERT INTO exercises (
@@ -62,14 +107,14 @@ export class ExerciseRepository {
 			) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)`,
 			[
 				id,
-				input.name.trim(),
+				name,
 				input.category ?? 'strength',
 				input.muscleGroup ?? 'other',
 				input.equipment ?? 'other',
 				trackingType,
 				input.defaultRestSeconds ?? 90,
 				input.weightStep ?? null,
-				input.notes ?? null,
+				input.notes?.trim() ? input.notes.trim() : null,
 				input.isCustom === false ? 0 : 1,
 				timestamp,
 				timestamp,
@@ -85,7 +130,7 @@ export class ExerciseRepository {
 
 	async getById (id: string): Promise<Exercise | null> {
 		const row = await this.db.getFirstAsync<ExerciseRow>(
-			'SELECT * FROM exercises WHERE id = ?',
+			`${EXERCISE_SELECT} WHERE e.id = ?`,
 			[id],
 		)
 		return row ? mapRow(row) : null
@@ -98,17 +143,38 @@ export class ExerciseRepository {
 		const includeArchived = options?.includeArchived === true
 		const rows = includeArchived
 			? await this.db.getAllAsync<ExerciseRow>(
-				'SELECT * FROM exercises ORDER BY name COLLATE NOCASE ASC',
+				`${EXERCISE_SELECT} ORDER BY e.name COLLATE NOCASE ASC`,
 			)
 			: await this.db.getAllAsync<ExerciseRow>(
-				`SELECT * FROM exercises
-				 WHERE archived_at IS NULL
-				 ORDER BY name COLLATE NOCASE ASC`,
+				`${EXERCISE_SELECT}
+				 WHERE e.archived_at IS NULL
+				 ORDER BY e.name COLLATE NOCASE ASC`,
 			)
 
 		return rows.map(mapRow)
 	}
 
+	async listArchived (): Promise<Exercise[]> {
+		const rows = await this.db.getAllAsync<ExerciseRow>(
+			`${EXERCISE_SELECT}
+			 WHERE e.archived_at IS NOT NULL
+			 ORDER BY e.archived_at DESC`,
+		)
+		return rows.map(mapRow)
+	}
+
+	async countBuiltin (): Promise<number> {
+		const row = await this.db.getFirstAsync<{ count: number }>(
+			'SELECT COUNT(*) AS count FROM exercises WHERE is_custom = 0',
+		)
+		return row?.count ?? 0
+	}
+
+	/**
+	 * Update exercise fields.
+	 * Built-ins: identity fields stay locked; rest/step/notes go to overrides.
+	 * Custom: full row update on exercises table.
+	 */
 	async update (id: string, input: UpdateExerciseInput): Promise<Exercise> {
 		const existing = await this.getById(id)
 		if (!existing) {
@@ -119,22 +185,40 @@ export class ExerciseRepository {
 			assertTrackingType(input.trackingType)
 		}
 
-		const next: Exercise = {
-			...existing,
-			name: input.name?.trim() ?? existing.name,
-			category: input.category ?? existing.category,
-			muscleGroup: input.muscleGroup ?? existing.muscleGroup,
-			equipment: input.equipment ?? existing.equipment,
-			trackingType: input.trackingType ?? existing.trackingType,
-			defaultRestSeconds:
-				input.defaultRestSeconds ?? existing.defaultRestSeconds,
-			weightStep:
+		const timestamp = nowIso()
+
+		if (!existing.isCustom) {
+			const rest =
+				input.defaultRestSeconds ?? existing.defaultRestSeconds
+			const weightStep =
 				input.weightStep !== undefined
 					? input.weightStep
-					: existing.weightStep,
-			notes: input.notes !== undefined ? input.notes : existing.notes,
-			updatedAt: nowIso(),
+					: existing.weightStep
+			const notes =
+				input.notes !== undefined
+					? input.notes?.trim()
+						? input.notes.trim()
+						: null
+					: existing.notes
+
+			await this.upsertUserSettings(id, {
+				defaultRestSeconds: rest,
+				weightStep,
+				notes,
+				updatedAt: timestamp,
+			})
+
+			const updated = await this.getById(id)
+			if (!updated) {
+				throw new Error('Failed to read exercise after update')
+			}
+			return updated
 		}
+
+		const name =
+			input.name !== undefined
+				? validateExerciseName(input.name)
+				: existing.name
 
 		await this.db.runAsync(
 			`UPDATE exercises SET
@@ -147,17 +231,23 @@ export class ExerciseRepository {
 				weight_step = ?,
 				notes = ?,
 				updated_at = ?
-			 WHERE id = ?`,
+			 WHERE id = ? AND is_custom = 1`,
 			[
-				next.name,
-				next.category,
-				next.muscleGroup,
-				next.equipment,
-				next.trackingType,
-				next.defaultRestSeconds,
-				next.weightStep,
-				next.notes,
-				next.updatedAt,
+				name,
+				input.category ?? existing.category,
+				input.muscleGroup ?? existing.muscleGroup,
+				input.equipment ?? existing.equipment,
+				input.trackingType ?? existing.trackingType,
+				input.defaultRestSeconds ?? existing.defaultRestSeconds,
+				input.weightStep !== undefined
+					? input.weightStep
+					: existing.weightStep,
+				input.notes !== undefined
+					? input.notes?.trim()
+						? input.notes.trim()
+						: null
+					: existing.notes,
+				timestamp,
 				id,
 			],
 		)
@@ -170,19 +260,22 @@ export class ExerciseRepository {
 	}
 
 	/**
-	 * Soft-delete: set archived_at without removing the row.
+	 * Soft-delete custom exercises only.
 	 */
 	async archive (id: string): Promise<Exercise> {
 		const existing = await this.getById(id)
 		if (!existing) {
 			throw new Error(`Exercise not found: ${id}`)
 		}
+		if (!existing.isCustom) {
+			throw new Error('Встроенное упражнение нельзя архивировать')
+		}
 
 		const timestamp = nowIso()
 		await this.db.runAsync(
 			`UPDATE exercises
 			 SET archived_at = ?, updated_at = ?
-			 WHERE id = ?`,
+			 WHERE id = ? AND is_custom = 1`,
 			[timestamp, timestamp, id],
 		)
 
@@ -191,5 +284,57 @@ export class ExerciseRepository {
 			throw new Error('Failed to read exercise after archive')
 		}
 		return archived
+	}
+
+	async restore (id: string): Promise<Exercise> {
+		const existing = await this.getById(id)
+		if (!existing) {
+			throw new Error(`Exercise not found: ${id}`)
+		}
+		if (!existing.isCustom) {
+			throw new Error('Встроенное упражнение нельзя восстановить из архива')
+		}
+
+		const timestamp = nowIso()
+		await this.db.runAsync(
+			`UPDATE exercises
+			 SET archived_at = NULL, updated_at = ?
+			 WHERE id = ? AND is_custom = 1`,
+			[timestamp, id],
+		)
+
+		const restored = await this.getById(id)
+		if (!restored) {
+			throw new Error('Failed to read exercise after restore')
+		}
+		return restored
+	}
+
+	private async upsertUserSettings (
+		exerciseId: string,
+		settings: {
+			defaultRestSeconds: number
+			weightStep: number | null
+			notes: string | null
+			updatedAt: string
+		},
+	): Promise<void> {
+		await this.db.runAsync(
+			`INSERT INTO exercise_user_settings (
+				exercise_id, default_rest_seconds, weight_step, notes, updated_at
+			) VALUES (?, ?, ?, ?, ?)
+			ON CONFLICT(exercise_id) DO UPDATE SET
+				default_rest_seconds = excluded.default_rest_seconds,
+				weight_step = excluded.weight_step,
+				notes = excluded.notes,
+				updated_at = excluded.updated_at`,
+			[
+				exerciseId,
+				settings.defaultRestSeconds,
+				settings.weightStep,
+				settings.notes,
+				settings.updatedAt,
+			],
+		)
 	}
 }
