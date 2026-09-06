@@ -21,6 +21,14 @@ import {
 	buildAutofillValues,
 	validateSetCompletion,
 } from '@/src/features/workout/set-logic'
+import { resolveRestSeconds } from '@/src/features/workout/rest-timer-logic'
+import type { RestNotificationClient } from '@/src/services/notifications/rest-notification-client'
+import { MemoryRestNotificationClient } from '@/src/services/notifications/memory-rest-notification-client'
+import {
+	RestTimerService,
+	type ActiveRestTimer,
+	type StartRestResult,
+} from './rest-timer-service'
 
 export class ActiveWorkoutExistsError extends Error {
 	constructor (public readonly activeWorkout: Workout) {
@@ -29,15 +37,28 @@ export class ActiveWorkoutExistsError extends Error {
 	}
 }
 
+export type CompleteSetResult = {
+	set: WorkoutSet
+	rest: StartRestResult
+}
+
 export class WorkoutService {
 	readonly workouts: WorkoutRepository
 	readonly exercises: ExerciseRepository
 	readonly templates: WorkoutTemplateRepository
+	readonly restTimer: RestTimerService
 
-	constructor (private readonly db: AppDatabase) {
+	constructor (
+		private readonly db: AppDatabase,
+		notifications?: RestNotificationClient,
+	) {
 		this.workouts = new WorkoutRepository(db)
 		this.exercises = new ExerciseRepository(db)
 		this.templates = new WorkoutTemplateRepository(db)
+		this.restTimer = new RestTimerService(
+			db,
+			notifications ?? new MemoryRestNotificationClient(),
+		)
 	}
 
 	async getActiveDetail (): Promise<WorkoutDetail | null> {
@@ -45,6 +66,7 @@ export class WorkoutService {
 		if (!active) {
 			return null
 		}
+		await this.restTimer.reconcileWorkout(active.id)
 		return this.getDetail(active.id)
 	}
 
@@ -97,9 +119,14 @@ export class WorkoutService {
 				const exercise = await this.exercises.getById(
 					templateExercise.exerciseId,
 				)
+				const restSeconds = resolveRestSeconds({
+					workoutExerciseRestSeconds: templateExercise.restSeconds,
+					exerciseDefaultRestSeconds: exercise?.defaultRestSeconds,
+				})
 				const workoutExercise = await this.workouts.addWorkoutExercise({
 					workoutId: workout.id,
 					exerciseId: templateExercise.exerciseId,
+					restSeconds,
 				})
 
 				const previous = await this.workouts.findPreviousCompletedSets(
@@ -159,6 +186,11 @@ export class WorkoutService {
 			throw new Error('Упражнение недоступно')
 		}
 
+		const restSeconds = resolveRestSeconds({
+			workoutExerciseRestSeconds: null,
+			exerciseDefaultRestSeconds: exercise.defaultRestSeconds,
+		})
+
 		let workoutExercise!: Awaited<
 			ReturnType<WorkoutRepository['addWorkoutExercise']>
 		>
@@ -167,6 +199,7 @@ export class WorkoutService {
 			workoutExercise = await this.workouts.addWorkoutExercise({
 				workoutId,
 				exerciseId,
+				restSeconds,
 			})
 			previous = await this.workouts.findPreviousCompletedSets(
 				exerciseId,
@@ -237,15 +270,19 @@ export class WorkoutService {
 			await this.workouts.countCompletedSetsForExercise(workoutExerciseId)
 
 		if (completed === 0) {
+			const restSeconds = resolveRestSeconds({
+				workoutExerciseRestSeconds: null,
+				exerciseDefaultRestSeconds: newExercise.defaultRestSeconds,
+			})
 			await this.workouts.updateWorkoutExercise(workoutExerciseId, {
 				exerciseId: newExerciseId,
+				restSeconds,
 			})
 			const sets = await this.workouts.listSets(workoutExerciseId)
 			const previous = await this.workouts.findPreviousCompletedSets(
 				newExerciseId,
 				(await this.workouts.getWorkoutById(we.workoutId))!.startedAt,
 			)
-			// Refresh draft autofill for first incomplete set if needed
 			for (let index = 0; index < sets.length; index += 1) {
 				const set = sets[index]
 				if (!set || set.completedAt) {
@@ -356,10 +393,13 @@ export class WorkoutService {
 		return this.workouts.updateSet(setId, input)
 	}
 
+	/**
+	 * Persist completed set first, then start rest timer + notification.
+	 */
 	async completeSet (
 		setId: string,
 		values?: UpdateSetInput,
-	): Promise<WorkoutSet> {
+	): Promise<CompleteSetResult> {
 		const set = await this.workouts.getSetById(setId)
 		if (!set) {
 			throw new Error('Подход не найден')
@@ -385,10 +425,24 @@ export class WorkoutService {
 			distance: next.distance ?? null,
 		})
 
-		return this.workouts.updateSet(setId, {
+		const updated = await this.workouts.updateSet(setId, {
 			...values,
 			completedAt: nowIso(),
 		})
+
+		const restSeconds = resolveRestSeconds({
+			workoutExerciseRestSeconds: we.restSeconds,
+			exerciseDefaultRestSeconds: exercise?.defaultRestSeconds,
+		})
+		const rest = await this.restTimer.startForCompletedSet({
+			workoutId: we.workoutId,
+			workoutExerciseId: we.id,
+			setId,
+			restSeconds,
+			exerciseName: exercise?.name,
+		})
+
+		return { set: updated, rest }
 	}
 
 	async uncompleteSet (setId: string): Promise<WorkoutSet> {
@@ -403,7 +457,11 @@ export class WorkoutService {
 			throw new Error('Упражнение не найдено')
 		}
 		await this.requireActive(we.workoutId)
-		return this.workouts.updateSet(setId, { completedAt: null })
+		const updated = await this.workouts.updateSet(setId, {
+			completedAt: null,
+		})
+		await this.restTimer.cancelIfSourceSet(we.workoutId, setId)
+		return updated
 	}
 
 	async removeSet (setId: string): Promise<void> {
@@ -419,10 +477,12 @@ export class WorkoutService {
 		}
 		await this.requireActive(we.workoutId)
 		await this.workouts.deleteSet(setId)
+		await this.restTimer.cancelIfSourceSet(we.workoutId, setId)
 	}
 
 	async finishWorkout (workoutId: string): Promise<WorkoutDetail> {
 		await this.requireActive(workoutId)
+		await this.restTimer.clearForWorkoutEnd(workoutId)
 		await this.workouts.updateWorkout(workoutId, {
 			finishedAt: nowIso(),
 		})
@@ -441,6 +501,7 @@ export class WorkoutService {
 		if (workout.finishedAt) {
 			throw new Error('Нельзя отменить завершённую тренировку')
 		}
+		await this.restTimer.clearForWorkoutEnd(workoutId)
 		await this.workouts.deleteWorkout(workoutId)
 	}
 
@@ -464,6 +525,20 @@ export class WorkoutService {
 		return result
 	}
 
+	getActiveRestTimer (workout: Workout): ActiveRestTimer | null {
+		if (!workout.restEndsAt || !workout.restStartedAt) {
+			return null
+		}
+		return {
+			workoutId: workout.id,
+			startedAt: workout.restStartedAt,
+			endsAt: workout.restEndsAt,
+			workoutExerciseId: workout.restWorkoutExerciseId,
+			setId: workout.restSetId,
+			notificationId: workout.restNotificationId,
+		}
+	}
+
 	private async ensureNoActiveWorkout (): Promise<void> {
 		const active = await this.workouts.getActiveWorkout()
 		if (active) {
@@ -483,8 +558,11 @@ export class WorkoutService {
 	}
 }
 
-export function createWorkoutService (db: AppDatabase): WorkoutService {
-	return new WorkoutService(db)
+export function createWorkoutService (
+	db: AppDatabase,
+	notifications?: RestNotificationClient,
+): WorkoutService {
+	return new WorkoutService(db, notifications)
 }
 
 /** Whether tracking type needs reps for completion UX. */

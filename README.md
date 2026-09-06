@@ -103,6 +103,22 @@ Active workout logging:
 
 Not in Phase 3: rest countdown timer, notifications, PR/e1RM/tonnage, ads.
 
+## Phase 4
+
+Rest timer:
+
+- automatic start after successful set completion
+- absolute `rest_ends_at` persistence (background / process-kill safe)
+- restore on app reopen + stale cleanup
+- −15 / +15 / skip controls
+- Android local notifications via `expo-notifications` (`rest-timer` channel)
+- notification permission asked in context of first rest use
+- workout exercise `rest_seconds` snapshot (template independence)
+
+Native Android device/emulator notification QA is a separate checkpoint — not claimed as PASS from unit tests alone.
+
+Not in Phase 4: progress charts, PR, ads, analytics, AI.
+
 ## Package
 
 - App name: `Мой спортзал`

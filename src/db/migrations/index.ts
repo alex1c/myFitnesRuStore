@@ -6,6 +6,7 @@ import type { AppDatabase } from '../client'
 import { MIGRATION_001_SQL } from './001_initial_schema'
 import { MIGRATION_002_SQL } from './002_exercise_user_settings'
 import { MIGRATION_003_SQL } from './003_single_active_workout'
+import { MIGRATION_004_SQL } from './004_rest_timer'
 import { nowIso } from '@/src/utils/dates'
 
 export type Migration = {
@@ -14,7 +15,7 @@ export type Migration = {
 	sql: string
 }
 
-/** Ordered list — append 003, … here in later phases. */
+/** Ordered list — append new migrations here in later phases. */
 export const MIGRATIONS: readonly Migration[] = [
 	{
 		version: 1,
@@ -30,6 +31,11 @@ export const MIGRATIONS: readonly Migration[] = [
 		version: 3,
 		name: '003_single_active_workout',
 		sql: MIGRATION_003_SQL,
+	},
+	{
+		version: 4,
+		name: '004_rest_timer',
+		sql: MIGRATION_004_SQL,
 	},
 ] as const
 

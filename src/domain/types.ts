@@ -100,6 +100,12 @@ export interface Workout {
 	startedAt: string
 	finishedAt: string | null
 	notes: string | null
+	/** Absolute rest timer start (ISO). Source of truth with restEndsAt. */
+	restStartedAt: string | null
+	restEndsAt: string | null
+	restWorkoutExerciseId: string | null
+	restSetId: string | null
+	restNotificationId: string | null
 	createdAt: string
 	updatedAt: string
 }
@@ -110,6 +116,11 @@ export interface WorkoutExercise {
 	exerciseId: string
 	position: number
 	notes: string | null
+	/**
+	 * Rest duration snapshotted when the exercise was added to the workout.
+	 * Independent from later template / exercise setting changes.
+	 */
+	restSeconds: number | null
 	createdAt: string
 	updatedAt: string
 }

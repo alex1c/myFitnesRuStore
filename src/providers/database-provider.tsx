@@ -25,6 +25,7 @@ import {
 	WorkoutTemplateRepository,
 	type AppDatabase,
 } from '@/src/db'
+import { getExpoRestNotificationClient } from '@/src/services/notifications/expo-rest-notification-client'
 import { colors, radius, spacing, typography } from '@/src/theme'
 
 type DatabaseContextValue = {
@@ -66,7 +67,10 @@ export function DatabaseProvider ({ children }: Props) {
 						schemaVersion,
 						exercises: new ExerciseRepository(db),
 						templates: new WorkoutTemplateRepository(db),
-						workouts: new WorkoutService(db),
+						workouts: new WorkoutService(
+							db,
+							getExpoRestNotificationClient(),
+						),
 					},
 				})
 			} catch (error) {

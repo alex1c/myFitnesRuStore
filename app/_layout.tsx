@@ -14,6 +14,7 @@ import { useColorScheme } from 'react-native'
 import 'react-native-reanimated'
 
 import { DatabaseProvider } from '@/src/providers/database-provider'
+import { configureRestNotificationHandler } from '@/src/services/notifications/expo-rest-notification-client'
 import { colors } from '@/src/theme'
 
 export { ErrorBoundary } from 'expo-router'
@@ -23,6 +24,7 @@ export const unstable_settings = {
 }
 
 SplashScreen.preventAutoHideAsync()
+configureRestNotificationHandler()
 
 const LightNavTheme = {
 	...DefaultTheme,

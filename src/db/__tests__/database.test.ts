@@ -22,12 +22,12 @@ async function setup () {
 }
 
 describe('database foundation', () => {
-	it('applies migrations through 003 and reports schema version 3', async () => {
+	it('applies migrations through 004 and reports schema version 4', async () => {
 		const { db, schemaVersion } = await setup()
 
-		expect(schemaVersion).toBe(3)
-		expect(LATEST_SCHEMA_VERSION).toBe(3)
-		expect(await getSchemaVersion(db)).toBe(3)
+		expect(schemaVersion).toBe(4)
+		expect(LATEST_SCHEMA_VERSION).toBe(4)
+		expect(await getSchemaVersion(db)).toBe(4)
 
 		const tables = await db.getAllAsync<{ name: string }>(
 			`SELECT name FROM sqlite_master

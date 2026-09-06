@@ -21,6 +21,11 @@ type WorkoutRow = {
 	started_at: string
 	finished_at: string | null
 	notes: string | null
+	rest_started_at: string | null
+	rest_ends_at: string | null
+	rest_workout_exercise_id: string | null
+	rest_set_id: string | null
+	rest_notification_id: string | null
 	created_at: string
 	updated_at: string
 }
@@ -31,6 +36,7 @@ type WorkoutExerciseRow = {
 	exercise_id: string
 	position: number
 	notes: string | null
+	rest_seconds: number | null
 	created_at: string
 	updated_at: string
 }
@@ -57,6 +63,11 @@ function mapWorkout (row: WorkoutRow): Workout {
 		startedAt: row.started_at,
 		finishedAt: row.finished_at,
 		notes: row.notes,
+		restStartedAt: row.rest_started_at ?? null,
+		restEndsAt: row.rest_ends_at ?? null,
+		restWorkoutExerciseId: row.rest_workout_exercise_id ?? null,
+		restSetId: row.rest_set_id ?? null,
+		restNotificationId: row.rest_notification_id ?? null,
 		createdAt: row.created_at,
 		updatedAt: row.updated_at,
 	}
@@ -69,6 +80,7 @@ function mapWorkoutExercise (row: WorkoutExerciseRow): WorkoutExercise {
 		exerciseId: row.exercise_id,
 		position: row.position,
 		notes: row.notes,
+		restSeconds: row.rest_seconds ?? null,
 		createdAt: row.created_at,
 		updatedAt: row.updated_at,
 	}
@@ -200,6 +212,7 @@ export class WorkoutRepository {
 		exerciseId: string
 		position?: number
 		notes?: string | null
+		restSeconds?: number | null
 	}): Promise<WorkoutExercise> {
 		const id = createId('wex')
 		const timestamp = nowIso()
@@ -208,14 +221,16 @@ export class WorkoutRepository {
 
 		await this.db.runAsync(
 			`INSERT INTO workout_exercises (
-				id, workout_id, exercise_id, position, notes, created_at, updated_at
-			) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+				id, workout_id, exercise_id, position, notes, rest_seconds,
+				created_at, updated_at
+			) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
 			[
 				id,
 				input.workoutId,
 				input.exerciseId,
 				position,
 				input.notes ?? null,
+				input.restSeconds ?? null,
 				timestamp,
 				timestamp,
 			],
@@ -249,7 +264,12 @@ export class WorkoutRepository {
 
 	async updateWorkoutExercise (
 		id: string,
-		input: Partial<{ exerciseId: string; notes: string | null; position: number }>,
+		input: Partial<{
+			exerciseId: string
+			notes: string | null
+			position: number
+			restSeconds: number | null
+		}>,
 	): Promise<WorkoutExercise> {
 		const existing = await this.getWorkoutExerciseById(id)
 		if (!existing) {
@@ -262,12 +282,16 @@ export class WorkoutRepository {
 				exercise_id = ?,
 				notes = ?,
 				position = ?,
+				rest_seconds = ?,
 				updated_at = ?
 			 WHERE id = ?`,
 			[
 				input.exerciseId ?? existing.exerciseId,
 				input.notes !== undefined ? input.notes : existing.notes,
 				input.position ?? existing.position,
+				input.restSeconds !== undefined
+					? input.restSeconds
+					: existing.restSeconds,
 				timestamp,
 				id,
 			],
@@ -511,6 +535,59 @@ export class WorkoutRepository {
 			[workoutExerciseId],
 		)
 		return row?.count ?? 0
+	}
+
+	async setRestTimer (
+		workoutId: string,
+		input: {
+			restStartedAt: string
+			restEndsAt: string
+			restWorkoutExerciseId: string | null
+			restSetId: string | null
+			restNotificationId: string | null
+		},
+	): Promise<Workout> {
+		const timestamp = nowIso()
+		await this.db.runAsync(
+			`UPDATE workouts SET
+				rest_started_at = ?,
+				rest_ends_at = ?,
+				rest_workout_exercise_id = ?,
+				rest_set_id = ?,
+				rest_notification_id = ?,
+				updated_at = ?
+			 WHERE id = ?`,
+			[
+				input.restStartedAt,
+				input.restEndsAt,
+				input.restWorkoutExerciseId,
+				input.restSetId,
+				input.restNotificationId,
+				timestamp,
+				workoutId,
+			],
+		)
+		const updated = await this.getWorkoutById(workoutId)
+		if (!updated) {
+			throw new Error(`Workout not found: ${workoutId}`)
+		}
+		return updated
+	}
+
+	async clearRestTimer (workoutId: string): Promise<Workout | null> {
+		const timestamp = nowIso()
+		await this.db.runAsync(
+			`UPDATE workouts SET
+				rest_started_at = NULL,
+				rest_ends_at = NULL,
+				rest_workout_exercise_id = NULL,
+				rest_set_id = NULL,
+				rest_notification_id = NULL,
+				updated_at = ?
+			 WHERE id = ?`,
+			[timestamp, workoutId],
+		)
+		return this.getWorkoutById(workoutId)
 	}
 
 	private async nextExercisePosition (workoutId: string): Promise<number> {

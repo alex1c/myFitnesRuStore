@@ -19,3 +19,4 @@ export {
 	WorkoutService,
 	createWorkoutService,
 } from './services/workout-service'
+export { RestTimerService, createRestTimerService } from './services/rest-timer-service'

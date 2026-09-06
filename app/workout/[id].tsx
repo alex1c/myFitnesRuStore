@@ -22,6 +22,7 @@ import { formatRestLabel } from '@/src/features/exercises/labels'
 import { formatElapsed } from '@/src/features/workout/set-logic'
 import { SET_TYPE_LABELS } from '@/src/features/workout/labels'
 import { WorkoutSetRow } from '@/src/features/workout/components/workout-set-row'
+import { RestTimerPanel } from '@/src/features/workout/components/rest-timer-panel'
 import { formatSetCount } from '@/src/features/templates/summary'
 import { useWorkoutService } from '@/src/providers/database-provider'
 import { radius, spacing, touchTarget, typography } from '@/src/theme'
@@ -39,6 +40,7 @@ export default function ActiveWorkoutScreen () {
 		if (!id) {
 			return
 		}
+		await workouts.restTimer.reconcileWorkout(id)
 		const next = await workouts.getDetail(id)
 		setDetail(next)
 	}, [id, workouts])
@@ -65,6 +67,25 @@ export default function ActiveWorkoutScreen () {
 		Alert.alert('Не удалось сохранить', message)
 	}
 
+	const maybeAskNotificationPermission = useCallback(() => {
+		if (!workouts.restTimer.consumePermissionPromptNeeded()) {
+			return
+		}
+		Alert.alert(
+			'Уведомления об отдыхе',
+			'Разрешите уведомления, чтобы приложение сообщало об окончании отдыха даже при заблокированном экране.',
+			[
+				{ text: 'Не сейчас', style: 'cancel' },
+				{
+					text: 'Разрешить',
+					onPress: () => {
+						void workouts.restTimer.requestNotificationPermission()
+					},
+				},
+			],
+		)
+	}, [workouts])
+
 	const handleComplete = async (
 		setId: string,
 		values: {
@@ -78,11 +99,30 @@ export default function ActiveWorkoutScreen () {
 			await workouts.completeSet(setId, values)
 			setError(null)
 			await load()
+			maybeAskNotificationPermission()
 		} catch (err) {
 			showError(err instanceof Error ? err.message : 'Попробуйте ещё раз')
 			throw err
 		}
 	}
+
+	const refreshRestFromWorkout = useCallback(async () => {
+		if (!id) {
+			return
+		}
+		const next = await workouts.getDetail(id)
+		setDetail(next)
+	}, [id, workouts])
+
+	const handleRestExpired = useCallback(() => {
+		// Clear persisted timer + notification; delay UI refresh so
+		// the panel can briefly show «Отдых закончен».
+		void workouts.restTimer.skip(id!).then(() => {
+			setTimeout(() => {
+				void refreshRestFromWorkout()
+			}, 1800)
+		})
+	}, [id, refreshRestFromWorkout, workouts])
 
 	if (!detail || detail.workout.finishedAt) {
 		return (
@@ -113,6 +153,28 @@ export default function ActiveWorkoutScreen () {
 					error={error}
 				/>
 
+				{detail.workout.restEndsAt ? (
+					<RestTimerPanel
+						endsAt={detail.workout.restEndsAt}
+						onAdd15={() => {
+							void workouts.restTimer
+								.add15(detail.workout.id)
+								.then(refreshRestFromWorkout)
+						}}
+						onMinus15={() => {
+							void workouts.restTimer
+								.minus15(detail.workout.id)
+								.then(refreshRestFromWorkout)
+						}}
+						onSkip={() => {
+							void workouts.restTimer
+								.skip(detail.workout.id)
+								.then(refreshRestFromWorkout)
+						}}
+						onExpired={handleRestExpired}
+					/>
+				) : null}
+
 				<FlatList
 					data={detail.exercises}
 					keyExtractor={(item) => item.workoutExercise.id}
@@ -141,7 +203,9 @@ export default function ActiveWorkoutScreen () {
 									<AppText variant="caption" muted>
 										Отдых{' '}
 										{formatRestLabel(
-											item.exercise?.defaultRestSeconds ?? 90,
+											item.workoutExercise.restSeconds
+												?? item.exercise?.defaultRestSeconds
+												?? 90,
 										)}
 										{item.exercise?.archivedAt
 											? ' • в архиве'
