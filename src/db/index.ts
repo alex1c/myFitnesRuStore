@@ -25,3 +25,9 @@ export {
 	createProgressService,
 } from './services/progress-service'
 export { ProgressRepository } from './repositories/progress-repository'
+export {
+	BackupService,
+	backupFileName,
+	createBackupService,
+	csvFileName,
+} from './services/backup-service'

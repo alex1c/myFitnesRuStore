@@ -151,6 +151,21 @@ Progress & personal records:
 
 Not in Phase 6: body measurements, AI coaching, ads, cloud.
 
+## Phase 7
+
+Data portability:
+
+- versioned JSON backup (`my-fitness-backup` v1)
+- atomic full restore (transactional replace; no merge)
+- custom exercises + user settings + templates + workouts/sets
+- built-in catalog from current app seed; user overrides restored on top
+- CSV export of completed sets (semicolon, UTF-8 BOM) for Excel
+- «Ещё» → Данные: backup / restore / CSV
+
+`Native Android rest notification QA pending`.
+
+Not in Phase 7: CSV import, cloud sync, body measurements, ads.
+
 ## Package
 
 - App name: `Мой спортзал`

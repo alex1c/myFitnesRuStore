@@ -1,6 +1,7 @@
 /**
  * Provides initialized AppDatabase to the React tree.
  * Shows a Russian fallback UI when bootstrap fails.
+ * After restore, remounts the app tree so every screen reloads fresh data.
  */
 import React, {
 	createContext,
@@ -8,6 +9,7 @@ import React, {
 	useContext,
 	useEffect,
 	useMemo,
+	useRef,
 	useState,
 } from 'react'
 import {
@@ -19,6 +21,7 @@ import {
 } from 'react-native'
 
 import {
+	BackupService,
 	ExerciseRepository,
 	initializeDatabase,
 	ProgressService,
@@ -34,7 +37,12 @@ type DatabaseContextValue = {
 	exercises: ExerciseRepository
 	templates: WorkoutTemplateRepository
 	workouts: WorkoutService
+	backup: BackupService
 	schemaVersion: number
+	/** Bumped after restore to remount navigation/screens. */
+	dataRevision: number
+	/** Rebuild services and remount UI after a successful restore. */
+	refreshAfterRestore: () => Promise<void>
 }
 
 const DatabaseContext = createContext<DatabaseContextValue | null>(null)
@@ -48,9 +56,58 @@ type Props = {
 	children: React.ReactNode
 }
 
+type ServiceBundle = Omit<DatabaseContextValue, 'refreshAfterRestore'>
+
+function buildServices (
+	db: AppDatabase,
+	schemaVersion: number,
+	dataRevision: number,
+): ServiceBundle {
+	const workouts = new WorkoutService(db, getExpoRestNotificationClient())
+	return {
+		db,
+		schemaVersion,
+		dataRevision,
+		exercises: new ExerciseRepository(db),
+		templates: new WorkoutTemplateRepository(db),
+		workouts,
+		backup: new BackupService(db),
+	}
+}
+
 export function DatabaseProvider ({ children }: Props) {
 	const [status, setStatus] = useState<Status>({ kind: 'loading' })
 	const [attempt, setAttempt] = useState(0)
+	const readyRef = useRef<DatabaseContextValue | null>(null)
+	const refreshRef = useRef<() => Promise<void>>(async () => {})
+
+	const refreshAfterRestore = useCallback(async () => {
+		const current = readyRef.current
+		if (!current) {
+			return
+		}
+		const next: DatabaseContextValue = {
+			...buildServices(
+				current.db,
+				current.schemaVersion,
+				current.dataRevision + 1,
+			),
+			refreshAfterRestore: () => refreshRef.current(),
+		}
+		readyRef.current = next
+		setStatus({ kind: 'ready', value: next })
+
+		// Reconcile rest timer via RestTimerService only (no DB-side notification insert).
+		try {
+			await next.workouts.getActiveDetail()
+		} catch {
+			// Native notifications may be unavailable; data restore still succeeded.
+		}
+	}, [])
+
+	useEffect(() => {
+		refreshRef.current = refreshAfterRestore
+	}, [refreshAfterRestore])
 
 	useEffect(() => {
 		let isActive = true
@@ -61,24 +118,18 @@ export function DatabaseProvider ({ children }: Props) {
 				if (!isActive) {
 					return
 				}
-				setStatus({
-					kind: 'ready',
-					value: {
-						db,
-						schemaVersion,
-						exercises: new ExerciseRepository(db),
-						templates: new WorkoutTemplateRepository(db),
-						workouts: new WorkoutService(
-							db,
-							getExpoRestNotificationClient(),
-						),
-					},
-				})
+				const value: DatabaseContextValue = {
+					...buildServices(db, schemaVersion, 0),
+					refreshAfterRestore: () => refreshRef.current(),
+				}
+				readyRef.current = value
+				setStatus({ kind: 'ready', value })
 			} catch (error) {
 				console.error('Database initialization failed', error)
 				if (!isActive) {
 					return
 				}
+				readyRef.current = null
 				setStatus({
 					kind: 'error',
 					message: 'Не удалось открыть данные приложения.',
@@ -92,6 +143,7 @@ export function DatabaseProvider ({ children }: Props) {
 	}, [attempt])
 
 	const handleRetry = useCallback(() => {
+		readyRef.current = null
 		setStatus({ kind: 'loading' })
 		setAttempt((current) => current + 1)
 	}, [])
@@ -127,7 +179,10 @@ export function DatabaseProvider ({ children }: Props) {
 
 	return (
 		<DatabaseContext.Provider value={status.value}>
-			{children}
+			{/* Remount the tree after restore so every screen reloads from SQLite. */}
+			<React.Fragment key={status.value.dataRevision}>
+				{children}
+			</React.Fragment>
 		</DatabaseContext.Provider>
 	)
 }
@@ -159,6 +214,10 @@ export function useWorkoutService (): WorkoutService {
 
 export function useProgressService (): ProgressService {
 	return useDatabase().workouts.progress
+}
+
+export function useBackupService (): BackupService {
+	return useDatabase().backup
 }
 
 const styles = StyleSheet.create({
