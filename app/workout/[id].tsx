@@ -23,6 +23,8 @@ import { formatElapsed } from '@/src/features/workout/set-logic'
 import { SET_TYPE_LABELS } from '@/src/features/workout/labels'
 import { WorkoutSetRow } from '@/src/features/workout/components/workout-set-row'
 import { RestTimerPanel } from '@/src/features/workout/components/rest-timer-panel'
+import { PersonalRecordBanner } from '@/src/features/progress/components/personal-record-banner'
+import type { PersonalRecordEvent } from '@/src/db/services/progress-service'
 import { formatSetCount } from '@/src/features/templates/summary'
 import { useWorkoutService } from '@/src/providers/database-provider'
 import { radius, spacing, touchTarget, typography } from '@/src/theme'
@@ -35,6 +37,9 @@ export default function ActiveWorkoutScreen () {
 	const workouts = useWorkoutService()
 	const [detail, setDetail] = useState<WorkoutDetail | null>(null)
 	const [error, setError] = useState<string | null>(null)
+	const [recordBanner, setRecordBanner] = useState<PersonalRecordEvent | null>(
+		null,
+	)
 
 	const load = useCallback(async () => {
 		if (!id) {
@@ -96,8 +101,10 @@ export default function ActiveWorkoutScreen () {
 		},
 	) => {
 		try {
-			await workouts.completeSet(setId, values)
+			const result = await workouts.completeSet(setId, values)
 			setError(null)
+			const celebrated = result.records.find((item) => item.celebrate)
+			setRecordBanner(celebrated ?? null)
 			await load()
 			maybeAskNotificationPermission()
 		} catch (err) {
@@ -152,6 +159,13 @@ export default function ActiveWorkoutScreen () {
 					completedCount={completedCount}
 					error={error}
 				/>
+
+				{recordBanner ? (
+					<PersonalRecordBanner
+						event={recordBanner}
+						onDismiss={() => setRecordBanner(null)}
+					/>
+				) : null}
 
 				{detail.workout.restEndsAt ? (
 					<RestTimerPanel

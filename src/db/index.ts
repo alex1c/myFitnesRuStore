@@ -20,3 +20,8 @@ export {
 	createWorkoutService,
 } from './services/workout-service'
 export { RestTimerService, createRestTimerService } from './services/rest-timer-service'
+export {
+	ProgressService,
+	createProgressService,
+} from './services/progress-service'
+export { ProgressRepository } from './repositories/progress-repository'

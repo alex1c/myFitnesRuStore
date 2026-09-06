@@ -1,5 +1,5 @@
 /**
- * Post-finish workout summary.
+ * Post-finish workout summary with volume and PR count.
  */
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import React, { useEffect, useMemo, useState } from 'react'
@@ -8,6 +8,7 @@ import { Pressable, StyleSheet } from 'react-native'
 import { AppText } from '@/src/components/app-text'
 import { Screen } from '@/src/components/screen'
 import type { WorkoutDetail } from '@/src/domain/types'
+import { formatVolumeKg, setVolumeKg } from '@/src/features/progress/metrics'
 import { formatWorkoutDuration } from '@/src/features/workout/set-logic'
 import {
 	formatExerciseCount,
@@ -23,13 +24,20 @@ export default function WorkoutSummaryScreen () {
 	const router = useRouter()
 	const workouts = useWorkoutService()
 	const [detail, setDetail] = useState<WorkoutDetail | null>(null)
+	const [recordCount, setRecordCount] = useState(0)
 
 	useEffect(() => {
 		void (async () => {
 			if (!id) {
 				return
 			}
-			setDetail(await workouts.getDetail(id))
+			const next = await workouts.getDetail(id)
+			setDetail(next)
+			if (next?.workout.finishedAt) {
+				setRecordCount(
+					await workouts.progress.countCelebratedRecordsInWorkout(id),
+				)
+			}
 		})()
 	}, [id, workouts])
 
@@ -42,6 +50,35 @@ export default function WorkoutSummaryScreen () {
 				sum + block.sets.filter((set) => set.completedAt).length,
 			0,
 		)
+	}, [detail])
+
+	const volumeKg = useMemo(() => {
+		if (!detail) {
+			return 0
+		}
+		return detail.exercises.reduce((sum, block) => {
+			if (block.exercise?.trackingType !== 'weight_reps') {
+				return sum
+			}
+			return (
+				sum
+				+ block.sets.reduce((inner, set) => {
+					if (!set.completedAt) {
+						return inner
+					}
+					return inner + (setVolumeKg(set.weight, set.reps) ?? 0)
+				}, 0)
+			)
+		}, 0)
+	}, [detail])
+
+	const exerciseWithSets = useMemo(() => {
+		if (!detail) {
+			return 0
+		}
+		return detail.exercises.filter((block) =>
+			block.sets.some((set) => set.completedAt),
+		).length
 	}, [detail])
 
 	if (!detail || !detail.workout.finishedAt) {
@@ -62,12 +99,20 @@ export default function WorkoutSummaryScreen () {
 					detail.workout.finishedAt,
 				)}
 			</AppText>
-			<AppText>
-				{formatSetCount(completedSets)}
-			</AppText>
-			<AppText>
-				{formatExerciseCount(detail.exercises.length)}
-			</AppText>
+			<AppText>{formatSetCount(completedSets)}</AppText>
+			<AppText>{formatExerciseCount(exerciseWithSets)}</AppText>
+			{volumeKg > 0 ? (
+				<AppText>{formatVolumeKg(volumeKg)} кг</AppText>
+			) : null}
+			{recordCount > 0 ? (
+				<AppText>🏆 {recordCount}{' '}
+					{recordCount === 1
+						? 'рекорд'
+						: recordCount < 5
+							? 'рекорда'
+							: 'рекордов'}
+				</AppText>
+			) : null}
 
 			<Pressable
 				onPress={() => router.replace('/')}
@@ -78,7 +123,9 @@ export default function WorkoutSummaryScreen () {
 				</AppText>
 			</Pressable>
 			<Pressable
-				onPress={() => router.replace(`/workout/history/${detail.workout.id}`)}
+				onPress={() =>
+					router.replace(`/workout/history/${detail.workout.id}`)
+				}
 				style={[styles.secondary, { borderColor: palette.border }]}
 			>
 				<AppText>Открыть тренировку</AppText>

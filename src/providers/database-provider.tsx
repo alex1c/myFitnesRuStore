@@ -21,6 +21,7 @@ import {
 import {
 	ExerciseRepository,
 	initializeDatabase,
+	ProgressService,
 	WorkoutService,
 	WorkoutTemplateRepository,
 	type AppDatabase,
@@ -154,6 +155,10 @@ export function useTemplateRepository (): WorkoutTemplateRepository {
 
 export function useWorkoutService (): WorkoutService {
 	return useDatabase().workouts
+}
+
+export function useProgressService (): ProgressService {
+	return useDatabase().workouts.progress
 }
 
 const styles = StyleSheet.create({

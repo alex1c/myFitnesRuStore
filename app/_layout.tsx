@@ -67,6 +67,7 @@ export default function RootLayout () {
 					<Stack.Screen name="(tabs)" options={{ headerShown: false }} />
 					<Stack.Screen name="templates" options={{ headerShown: false }} />
 					<Stack.Screen name="workout" options={{ headerShown: false }} />
+					<Stack.Screen name="progress" options={{ headerShown: false }} />
 				</Stack>
 			</ThemeProvider>
 		</DatabaseProvider>

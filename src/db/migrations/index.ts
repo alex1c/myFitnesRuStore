@@ -7,6 +7,7 @@ import { MIGRATION_001_SQL } from './001_initial_schema'
 import { MIGRATION_002_SQL } from './002_exercise_user_settings'
 import { MIGRATION_003_SQL } from './003_single_active_workout'
 import { MIGRATION_004_SQL } from './004_rest_timer'
+import { MIGRATION_005_SQL } from './005_progress_indexes'
 import { nowIso } from '@/src/utils/dates'
 
 export type Migration = {
@@ -36,6 +37,11 @@ export const MIGRATIONS: readonly Migration[] = [
 		version: 4,
 		name: '004_rest_timer',
 		sql: MIGRATION_004_SQL,
+	},
+	{
+		version: 5,
+		name: '005_progress_indexes',
+		sql: MIGRATION_005_SQL,
 	},
 ] as const
 

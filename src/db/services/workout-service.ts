@@ -29,6 +29,10 @@ import {
 	type ActiveRestTimer,
 	type StartRestResult,
 } from './rest-timer-service'
+import {
+	ProgressService,
+	type PersonalRecordEvent,
+} from './progress-service'
 
 export class ActiveWorkoutExistsError extends Error {
 	constructor (public readonly activeWorkout: Workout) {
@@ -40,6 +44,7 @@ export class ActiveWorkoutExistsError extends Error {
 export type CompleteSetResult = {
 	set: WorkoutSet
 	rest: StartRestResult
+	records: PersonalRecordEvent[]
 }
 
 export class WorkoutService {
@@ -47,6 +52,7 @@ export class WorkoutService {
 	readonly exercises: ExerciseRepository
 	readonly templates: WorkoutTemplateRepository
 	readonly restTimer: RestTimerService
+	readonly progress: ProgressService
 
 	constructor (
 		private readonly db: AppDatabase,
@@ -59,6 +65,7 @@ export class WorkoutService {
 			db,
 			notifications ?? new MemoryRestNotificationClient(),
 		)
+		this.progress = new ProgressService(db)
 	}
 
 	async getActiveDetail (): Promise<WorkoutDetail | null> {
@@ -430,6 +437,13 @@ export class WorkoutService {
 			completedAt: nowIso(),
 		})
 
+		const records = await this.progress.evaluatePersonalRecords({
+			exerciseId: we.exerciseId,
+			exerciseName: exercise?.name ?? 'Упражнение',
+			trackingType: exercise?.trackingType ?? 'weight_reps',
+			set: updated,
+		})
+
 		const restSeconds = resolveRestSeconds({
 			workoutExerciseRestSeconds: we.restSeconds,
 			exerciseDefaultRestSeconds: exercise?.defaultRestSeconds,
@@ -442,7 +456,7 @@ export class WorkoutService {
 			exerciseName: exercise?.name,
 		})
 
-		return { set: updated, rest }
+		return { set: updated, rest, records }
 	}
 
 	async uncompleteSet (setId: string): Promise<WorkoutSet> {

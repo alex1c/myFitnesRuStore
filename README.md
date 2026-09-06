@@ -136,6 +136,21 @@ Workout history:
 
 Not in Phase 5: PR / e1RM / charts / backup / ads.
 
+## Phase 6
+
+Progress & personal records:
+
+- overall summary (30 / 90 / 180 / all)
+- exercise list with completed history
+- weight / e1RM / volume metrics and charts (`react-native-svg`)
+- tracking-type-specific metrics (reps, duration, distance)
+- live PR feedback after completed sets (derived from history)
+- workout finish summary: volume + record count
+
+`Native Android rest notification QA pending`.
+
+Not in Phase 6: body measurements, AI coaching, ads, cloud.
+
 ## Package
 
 - App name: `Мой спортзал`
