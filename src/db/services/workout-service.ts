@@ -510,19 +510,142 @@ export class WorkoutService {
 		exerciseCount: number
 		completedSetCount: number
 	}[]> {
-		const workouts = await this.workouts.listCompleted()
-		const result = []
-		for (const workout of workouts) {
-			const exercises = await this.workouts.listWorkoutExercises(workout.id)
-			const completedSetCount =
-				await this.workouts.countCompletedSetsInWorkout(workout.id)
-			result.push({
-				workout,
-				exerciseCount: exercises.length,
-				completedSetCount,
-			})
+		return this.workouts.listHistorySummaries()
+	}
+
+	/**
+	 * Edit a completed historical set without clearing completed_at.
+	 */
+	async updateCompletedSet (
+		setId: string,
+		input: UpdateSetInput,
+	): Promise<WorkoutSet> {
+		const set = await this.workouts.getSetById(setId)
+		if (!set) {
+			throw new Error('Подход не найден')
 		}
-		return result
+		if (!set.completedAt) {
+			throw new Error('Редактировать можно только выполненный подход')
+		}
+		const we = await this.workouts.getWorkoutExerciseById(
+			set.workoutExerciseId,
+		)
+		if (!we) {
+			throw new Error('Упражнение не найдено')
+		}
+		const workout = await this.workouts.getWorkoutById(we.workoutId)
+		if (!workout?.finishedAt) {
+			throw new Error('Редактирование доступно для завершённых тренировок')
+		}
+
+		const exercise = await this.exercises.getById(we.exerciseId)
+		const next = {
+			...set,
+			...input,
+		}
+		validateSetCompletion({
+			trackingType: exercise?.trackingType ?? 'weight_reps',
+			weight: next.weight ?? null,
+			reps: next.reps ?? null,
+			durationSeconds: next.durationSeconds ?? null,
+			distance: next.distance ?? null,
+		})
+
+		// Preserve original completion timestamp — edit is a correction, not a re-log.
+		return this.workouts.updateSet(setId, {
+			...input,
+			completedAt: set.completedAt,
+		})
+	}
+
+	async updateWorkoutNotes (
+		workoutId: string,
+		notes: string | null,
+	): Promise<Workout> {
+		const workout = await this.workouts.getWorkoutById(workoutId)
+		if (!workout) {
+			throw new Error('Тренировка не найдена')
+		}
+		return this.workouts.updateWorkout(workoutId, { notes })
+	}
+
+	/**
+	 * Hard-delete a finished workout (history). Cascades children via FK.
+	 */
+	async deleteCompletedWorkout (workoutId: string): Promise<void> {
+		const workout = await this.workouts.getWorkoutById(workoutId)
+		if (!workout) {
+			throw new Error('Тренировка не найдена')
+		}
+		if (!workout.finishedAt) {
+			throw new Error('Удаление из истории доступно только для завершённых')
+		}
+		await this.workouts.deleteWorkout(workoutId)
+	}
+
+	/**
+	 * Create a new active workout from a finished history snapshot.
+	 * Draft set count matches historical completed sets per exercise.
+	 */
+	async repeatWorkout (sourceWorkoutId: string): Promise<WorkoutDetail> {
+		const source = await this.getDetail(sourceWorkoutId)
+		if (!source) {
+			throw new Error('Тренировка не найдена')
+		}
+		if (!source.workout.finishedAt) {
+			throw new Error('Повторить можно только завершённую тренировку')
+		}
+
+		let workoutId = ''
+		await this.db.withTransactionAsync(async () => {
+			await this.ensureNoActiveWorkout()
+			const workout = await this.workouts.createWorkout({
+				name: source.workout.name,
+				templateId: source.workout.templateId,
+			})
+			workoutId = workout.id
+
+			for (const block of source.exercises) {
+				const restSeconds = resolveRestSeconds({
+					workoutExerciseRestSeconds: block.workoutExercise.restSeconds,
+					exerciseDefaultRestSeconds: block.exercise?.defaultRestSeconds,
+				})
+				const workoutExercise = await this.workouts.addWorkoutExercise({
+					workoutId: workout.id,
+					exerciseId: block.workoutExercise.exerciseId,
+					restSeconds,
+				})
+
+				const completed = block.sets.filter((set) => set.completedAt)
+				const previous = await this.workouts.findPreviousCompletedSets(
+					block.workoutExercise.exerciseId,
+					workout.startedAt,
+				)
+				const draftCount = completed.length
+
+				for (let index = 0; index < draftCount; index += 1) {
+					const autofill = buildAutofillValues({
+						trackingType: block.exercise?.trackingType ?? 'weight_reps',
+						currentCompletedSets: [],
+						previousSets: previous,
+						nextIndex: index,
+					})
+					await this.workouts.createSet({
+						workoutExerciseId: workoutExercise.id,
+						position: index,
+						setType: DEFAULT_SET_TYPE,
+						...autofill,
+						completedAt: null,
+					})
+				}
+			}
+		})
+
+		const created = await this.getDetail(workoutId)
+		if (!created) {
+			throw new Error('Не удалось создать тренировку')
+		}
+		return created
 	}
 
 	getActiveRestTimer (workout: Workout): ActiveRestTimer | null {

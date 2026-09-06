@@ -1,5 +1,5 @@
 /**
- * History — completed workouts list.
+ * History — completed workouts list (FlatList, newest first).
  */
 import { useFocusEffect, useRouter } from 'expo-router'
 import React, { useCallback, useState } from 'react'
@@ -12,6 +12,7 @@ import {
 	formatExerciseCount,
 	formatSetCount,
 } from '@/src/features/templates/summary'
+import { formatHistoryDate } from '@/src/features/workout/history-format'
 import { formatWorkoutDuration } from '@/src/features/workout/set-logic'
 import { useWorkoutService } from '@/src/providers/database-provider'
 import { radius, spacing, touchTarget } from '@/src/theme'
@@ -21,17 +22,6 @@ type HistoryItem = {
 	workout: Workout
 	exerciseCount: number
 	completedSetCount: number
-}
-
-function formatDateLabel (iso: string): string {
-	const date = new Date(iso)
-	if (!Number.isFinite(date.getTime())) {
-		return ''
-	}
-	return date.toLocaleDateString('ru-RU', {
-		day: 'numeric',
-		month: 'long',
-	})
 }
 
 export default function HistoryScreen () {
@@ -62,7 +52,9 @@ export default function HistoryScreen () {
 				data={items}
 				keyExtractor={(item) => item.workout.id}
 				contentContainerStyle={styles.list}
-				ItemSeparatorComponent={() => <View style={{ height: spacing.sm }} />}
+				ItemSeparatorComponent={() => (
+					<View style={{ height: spacing.sm }} />
+				)}
 				ListEmptyComponent={
 					<View style={styles.empty}>
 						<AppText variant="subtitle">Пока пусто</AppText>
@@ -86,7 +78,7 @@ export default function HistoryScreen () {
 						]}
 					>
 						<AppText variant="caption" muted>
-							{formatDateLabel(
+							{formatHistoryDate(
 								item.workout.finishedAt ?? item.workout.startedAt,
 							)}
 						</AppText>

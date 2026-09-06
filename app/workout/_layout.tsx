@@ -29,6 +29,10 @@ export default function WorkoutLayout () {
 				options={{ title: 'Упражнение' }}
 			/>
 			<Stack.Screen name="history/[id]" options={{ title: 'Тренировка' }} />
+			<Stack.Screen
+				name="history/edit-set/[setId]"
+				options={{ title: 'Изменить подход' }}
+			/>
 		</Stack>
 	)
 }

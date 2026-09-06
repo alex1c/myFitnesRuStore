@@ -159,9 +159,51 @@ export class WorkoutRepository {
 		const rows = await this.db.getAllAsync<WorkoutRow>(
 			`SELECT * FROM workouts
 			 WHERE finished_at IS NOT NULL
-			 ORDER BY finished_at DESC, started_at DESC, id DESC`,
+			 ORDER BY finished_at DESC, id DESC`,
 		)
 		return rows.map(mapWorkout)
+	}
+
+	/**
+	 * Completed workouts with aggregated summary counts in one query.
+	 * exerciseCount = workout exercises that have ≥1 completed set.
+	 */
+	async listHistorySummaries (): Promise<{
+		workout: Workout
+		exerciseCount: number
+		completedSetCount: number
+	}[]> {
+		type SummaryRow = WorkoutRow & {
+			completed_set_count: number
+			exercise_with_sets_count: number
+		}
+		const rows = await this.db.getAllAsync<SummaryRow>(
+			`SELECT w.*,
+				(
+					SELECT COUNT(*)
+					FROM sets s
+					INNER JOIN workout_exercises we ON we.id = s.workout_exercise_id
+					WHERE we.workout_id = w.id AND s.completed_at IS NOT NULL
+				) AS completed_set_count,
+				(
+					SELECT COUNT(*)
+					FROM workout_exercises we
+					WHERE we.workout_id = w.id
+					  AND EXISTS (
+						SELECT 1 FROM sets s
+						WHERE s.workout_exercise_id = we.id
+						  AND s.completed_at IS NOT NULL
+					  )
+				) AS exercise_with_sets_count
+			 FROM workouts w
+			 WHERE w.finished_at IS NOT NULL
+			 ORDER BY w.finished_at DESC, w.id DESC`,
+		)
+		return rows.map((row) => ({
+			workout: mapWorkout(row),
+			exerciseCount: row.exercise_with_sets_count ?? 0,
+			completedSetCount: row.completed_set_count ?? 0,
+		}))
 	}
 
 	async updateWorkout (

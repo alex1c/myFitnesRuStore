@@ -119,6 +119,23 @@ Native Android device/emulator notification QA is a separate checkpoint — not 
 
 Not in Phase 4: progress charts, PR, ads, analytics, AI.
 
+## Phase 5
+
+Workout history:
+
+- finished workouts list (newest first, FlatList)
+- Russian dates (Сегодня / Вчера / 5 сентября)
+- history detail with completed sets only
+- tracking-type display + set-type labels
+- workout notes + exercise notes
+- edit completed sets (preserves `completed_at`)
+- delete finished workout with confirmation
+- **Повторить тренировку** → new active workout from historical snapshot
+
+`Native timer notification QA pending` (Phase 4 Android runtime still not verified).
+
+Not in Phase 5: PR / e1RM / charts / backup / ads.
+
 ## Package
 
 - App name: `Мой спортзал`
