@@ -157,5 +157,32 @@ export type CreateWorkoutTemplateInput = {
 	position?: number
 }
 
+export type AddTemplateExerciseInput = {
+	templateId: string
+	exerciseId: string
+	position?: number
+	plannedSets?: number | null
+	targetRepsMin?: number | null
+	targetRepsMax?: number | null
+	restSeconds?: number | null
+}
+
+export type UpdateTemplateExerciseInput = Partial<{
+	plannedSets: number | null
+	targetRepsMin: number | null
+	targetRepsMax: number | null
+	restSeconds: number | null
+	position: number
+}>
+
+/** Template with ordered exercise rows for editor/detail screens. */
+export type WorkoutTemplateDetail = {
+	template: WorkoutTemplate
+	exercises: TemplateExercise[]
+}
+
+/** Max length for workout template names. */
+export const TEMPLATE_NAME_MAX_LENGTH = 80
+
 /** Max length for exercise names shown/stored in the library. */
 export const EXERCISE_NAME_MAX_LENGTH = 80

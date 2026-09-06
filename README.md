@@ -75,6 +75,18 @@ Exercise library:
 
 Not in Phase 1: active workouts, set logging, rest countdown, history charts, ads, cloud, AI.
 
+## Phase 2
+
+Workout templates:
+
+- create / edit / duplicate / archive / restore
+- add exercises from library with search/filters
+- planned sets, reps range, per-exercise rest override
+- reorder (up/down)
+- Today screen as template launcher (no active workout yet)
+
+Not in Phase 2: starting a workout, set logging, rest timer, notifications.
+
 ## Package
 
 - App name: `Мой спортзал`
