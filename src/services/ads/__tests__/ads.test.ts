@@ -33,6 +33,10 @@ describe('banner suppression', () => {
 	it('hides banner when an active workout exists', () => {
 		expect(shouldShowBanner(true)).toBe(false)
 	})
+
+	it('hides banner when active-workout state is unknown', () => {
+		expect(shouldShowBanner(null)).toBe(false)
+	})
 })
 
 describe('post-workout interstitial eligibility', () => {

@@ -55,6 +55,10 @@ export function canShowPostWorkoutInterstitial (
 }
 
 /** Banner is suppressed while any active workout exists. */
-export function shouldShowBanner (hasActiveWorkout: boolean): boolean {
-	return !hasActiveWorkout
+export function shouldShowBanner (
+	hasActiveWorkout: boolean | null,
+): boolean {
+	// Unknown state is fail-closed: a query failure must never expose an ad
+	// while an active workout might exist.
+	return hasActiveWorkout === false
 }

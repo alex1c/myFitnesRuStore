@@ -57,8 +57,8 @@ export function AppBannerSlot ({ suppress }: AppBannerSlotProps) {
 					}
 				} catch {
 					if (!cancelled) {
-						// On query failure, prefer showing banner over permanent hide.
-						setQueriedActive(false)
+						// Fail closed: active-workout safety wins over ad availability.
+						setQueriedActive(true)
 					}
 				}
 			})()
