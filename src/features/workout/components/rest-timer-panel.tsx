@@ -6,6 +6,7 @@ import { AppState, Pressable, StyleSheet, View } from 'react-native'
 
 import { AppText } from '@/src/components/app-text'
 import {
+	REST_ADJUST_SECONDS,
 	formatCountdown,
 	isRestActive,
 	remainingMs,
@@ -73,6 +74,7 @@ export function RestTimerPanel ({
 	if (showFinished) {
 		return (
 			<View
+				accessibilityLiveRegion="polite"
 				style={[
 					styles.panel,
 					{
@@ -85,6 +87,8 @@ export function RestTimerPanel ({
 			</View>
 		)
 	}
+
+	const adjustLabel = `${REST_ADJUST_SECONDS} сек`
 
 	return (
 		<View
@@ -100,24 +104,33 @@ export function RestTimerPanel ({
 				<AppText variant="caption" muted>
 					Отдых
 				</AppText>
-				<AppText style={styles.countdown}>
+				<AppText
+					accessibilityLabel={`Осталось ${formatCountdown(remainingMs(endsAt, now))}`}
+					style={[styles.countdown, { color: palette.text }]}
+				>
 					{formatCountdown(remainingMs(endsAt, now))}
 				</AppText>
 			</View>
 			<View style={styles.actions}>
 				<Pressable
+					accessibilityRole="button"
+					accessibilityLabel={`Уменьшить отдых на ${adjustLabel}`}
 					onPress={onMinus15}
 					style={[styles.btn, { borderColor: palette.border }]}
 				>
-					<AppText>−15 сек</AppText>
+					<AppText>−{adjustLabel}</AppText>
 				</Pressable>
 				<Pressable
+					accessibilityRole="button"
+					accessibilityLabel={`Увеличить отдых на ${adjustLabel}`}
 					onPress={onAdd15}
 					style={[styles.btn, { borderColor: palette.border }]}
 				>
-					<AppText>+15 сек</AppText>
+					<AppText>+{adjustLabel}</AppText>
 				</Pressable>
 				<Pressable
+					accessibilityRole="button"
+					accessibilityLabel="Пропустить отдых"
 					onPress={onSkip}
 					style={[
 						styles.btn,
@@ -149,6 +162,8 @@ const styles = StyleSheet.create({
 	countdown: {
 		...typography.title,
 		fontVariant: ['tabular-nums'],
+		fontSize: 28,
+		lineHeight: 34,
 	},
 	actions: {
 		flexDirection: 'row',
@@ -165,6 +180,6 @@ const styles = StyleSheet.create({
 	},
 	skip: {
 		borderWidth: 0,
-		flex: 1.2,
+		flex: 1.35,
 	},
 })

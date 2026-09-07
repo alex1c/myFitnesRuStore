@@ -57,7 +57,7 @@ export default function HistoryScreen () {
 				)}
 				ListEmptyComponent={
 					<View style={styles.empty}>
-						<AppText variant="subtitle">Пока пусто</AppText>
+						<AppText variant="subtitle">Пока нет тренировок</AppText>
 						<AppText muted>
 							Завершённые тренировки появятся здесь.
 						</AppText>

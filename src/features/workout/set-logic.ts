@@ -209,6 +209,32 @@ export function formatElapsedHuman (
 	return `${hours} ч ${rem} мин назад`
 }
 
+/**
+ * Compact active-workout meta for Today: "42 мин • 12 подходов".
+ */
+export function formatActiveWorkoutDuration (
+	startedAtIso: string,
+	nowMs = Date.now(),
+): string {
+	const started = Date.parse(startedAtIso)
+	if (!Number.isFinite(started)) {
+		return '0 мин'
+	}
+	const minutes = Math.max(0, Math.floor((nowMs - started) / 60000))
+	if (minutes < 1) {
+		return 'меньше минуты'
+	}
+	if (minutes < 60) {
+		return `${minutes} мин`
+	}
+	const hours = Math.floor(minutes / 60)
+	const rem = minutes % 60
+	if (rem === 0) {
+		return `${hours} ч`
+	}
+	return `${hours} ч ${rem} мин`
+}
+
 export function formatWorkoutDuration (
 	startedAtIso: string,
 	finishedAtIso: string,

@@ -19,7 +19,10 @@ import {
 	formatVolumeKg,
 	type ProgressPeriodDays,
 } from '@/src/features/progress/metrics'
-import { formatSetCount } from '@/src/features/templates/summary'
+import {
+	formatSetCount,
+	pluralRu,
+} from '@/src/features/templates/summary'
 import { useProgressService } from '@/src/providers/database-provider'
 import { radius, spacing, touchTarget, typography } from '@/src/theme'
 import { useThemeColors } from '@/src/theme/use-theme-colors'
@@ -136,11 +139,12 @@ export default function ProgressScreen () {
 								<AppText variant="subtitle">{periodLabel}</AppText>
 								<AppText>
 									{summary.workoutCount}{' '}
-									{summary.workoutCount === 1
-										? 'тренировка'
-										: summary.workoutCount < 5
-											? 'тренировки'
-											: 'тренировок'}
+									{pluralRu(
+										summary.workoutCount,
+										'тренировка',
+										'тренировки',
+										'тренировок',
+									)}
 								</AppText>
 								<AppText>
 									{formatSetCount(summary.completedSetCount)}

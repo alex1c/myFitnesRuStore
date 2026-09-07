@@ -1,5 +1,5 @@
 /**
- * Root layout: database bootstrap → themed navigation shell.
+ * Root layout: database → theme preference → themed navigation shell.
  */
 import {
 	DarkTheme,
@@ -9,13 +9,14 @@ import {
 } from 'expo-router'
 import * as SplashScreen from 'expo-splash-screen'
 import { StatusBar } from 'expo-status-bar'
-import { useEffect } from 'react'
-import { useColorScheme } from 'react-native'
+import { useEffect, type ReactNode } from 'react'
 import 'react-native-reanimated'
 
 import { DatabaseProvider } from '@/src/providers/database-provider'
+import { ThemePreferenceProvider } from '@/src/providers/theme-preference-provider'
 import { configureRestNotificationHandler } from '@/src/services/notifications/expo-rest-notification-client'
 import { colors } from '@/src/theme'
+import { useResolvedColorScheme } from '@/src/theme/use-theme-colors'
 
 export { ErrorBoundary } from 'expo-router'
 
@@ -50,26 +51,36 @@ const DarkNavTheme = {
 	},
 }
 
-export default function RootLayout () {
-	const colorScheme = useColorScheme()
+function ThemedNavigation ({ children }: { children: ReactNode }) {
+	const colorScheme = useResolvedColorScheme()
 
+	return (
+		<ThemeProvider
+			value={colorScheme === 'dark' ? DarkNavTheme : LightNavTheme}
+		>
+			<StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
+			{children}
+		</ThemeProvider>
+	)
+}
+
+export default function RootLayout () {
 	useEffect(() => {
 		SplashScreen.hideAsync()
 	}, [])
 
 	return (
 		<DatabaseProvider>
-			<ThemeProvider
-				value={colorScheme === 'dark' ? DarkNavTheme : LightNavTheme}
-			>
-				<StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
-				<Stack>
-					<Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-					<Stack.Screen name="templates" options={{ headerShown: false }} />
-					<Stack.Screen name="workout" options={{ headerShown: false }} />
-					<Stack.Screen name="progress" options={{ headerShown: false }} />
-				</Stack>
-			</ThemeProvider>
+			<ThemePreferenceProvider>
+				<ThemedNavigation>
+					<Stack>
+						<Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+						<Stack.Screen name="templates" options={{ headerShown: false }} />
+						<Stack.Screen name="workout" options={{ headerShown: false }} />
+						<Stack.Screen name="progress" options={{ headerShown: false }} />
+					</Stack>
+				</ThemedNavigation>
+			</ThemePreferenceProvider>
 		</DatabaseProvider>
 	)
 }

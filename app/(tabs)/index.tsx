@@ -10,7 +10,10 @@ import { Screen } from '@/src/components/screen'
 import type { TemplateExercise, Workout, WorkoutTemplate } from '@/src/domain/types'
 import { ActiveWorkoutExistsError } from '@/src/db'
 import { TemplateListCard } from '@/src/features/templates/components/template-list-card'
-import { formatElapsedHuman } from '@/src/features/workout/set-logic'
+import { formatSetCount } from '@/src/features/templates/summary'
+import {
+	formatActiveWorkoutDuration,
+} from '@/src/features/workout/set-logic'
 import {
 	useTemplateRepository,
 	useWorkoutService,
@@ -30,6 +33,7 @@ export default function TodayScreen () {
 	const workouts = useWorkoutService()
 	const [cards, setCards] = useState<TemplateCardData[]>([])
 	const [active, setActive] = useState<Workout | null>(null)
+	const [activeCompletedSets, setActiveCompletedSets] = useState(0)
 	const [isLoading, setIsLoading] = useState(true)
 
 	const load = useCallback(async () => {
@@ -37,6 +41,15 @@ export default function TodayScreen () {
 		try {
 			const activeWorkout = await workouts.workouts.getActiveWorkout()
 			setActive(activeWorkout)
+			if (activeWorkout) {
+				const count =
+					await workouts.workouts.countCompletedSetsInWorkout(
+						activeWorkout.id,
+					)
+				setActiveCompletedSets(count)
+			} else {
+				setActiveCompletedSets(0)
+			}
 			const list = await templates.list()
 			const withExercises = await Promise.all(
 				list.map(async (template) => ({
@@ -120,12 +133,20 @@ export default function TodayScreen () {
 								},
 							]}
 						>
-							<AppText variant="subtitle">Текущая тренировка</AppText>
-							<AppText variant="title">{active.name}</AppText>
+							<AppText variant="caption" muted>
+								Текущая тренировка
+							</AppText>
+							<AppText variant="title" numberOfLines={2}>
+								{active.name}
+							</AppText>
 							<AppText muted>
-								Начата {formatElapsedHuman(active.startedAt)}
+								{formatActiveWorkoutDuration(active.startedAt)}
+								{' • '}
+								{formatSetCount(activeCompletedSets)}
 							</AppText>
 							<Pressable
+								accessibilityRole="button"
+								accessibilityLabel="Продолжить тренировку"
 								onPress={() => router.push(`/workout/${active.id}`)}
 								style={[
 									styles.primaryButton,

@@ -1,6 +1,7 @@
 /**
- * Ещё — data portability (backup / restore / CSV) and about.
+ * Ещё — theme, data portability, about.
  */
+import Constants from 'expo-constants'
 import React, { useCallback, useState } from 'react'
 import { ActivityIndicator, Alert, Pressable, StyleSheet, View } from 'react-native'
 
@@ -19,11 +20,18 @@ import {
 	writeCacheTextFile,
 } from '@/src/features/backup/file-io'
 import {
+	THEME_PREFERENCES,
+	THEME_PREFERENCE_LABELS,
+	type ThemePreference,
+} from '@/src/features/settings/theme-preference'
+import {
 	useBackupService,
 	useDatabase,
 } from '@/src/providers/database-provider'
-import { spacing, touchTarget } from '@/src/theme'
+import { useThemePreference } from '@/src/providers/theme-preference-provider'
+import { radius, spacing, touchTarget } from '@/src/theme'
 import { useThemeColors } from '@/src/theme/use-theme-colors'
+import { getAppVersion } from '@/src/utils/app-version'
 
 function isUserCancelled (error: unknown): boolean {
 	if (!error || typeof error !== 'object') {
@@ -42,7 +50,9 @@ export default function MoreScreen () {
 	const palette = useThemeColors()
 	const { schemaVersion, refreshAfterRestore } = useDatabase()
 	const backup = useBackupService()
+	const { preference, setPreference } = useThemePreference()
 	const [busy, setBusy] = useState(false)
+	const appVersion = getAppVersion()
 
 	const handleCreateBackup = useCallback(async () => {
 		if (busy) {
@@ -74,7 +84,6 @@ export default function MoreScreen () {
 
 	const runRestore = useCallback(
 		async (raw: string) => {
-			// Local safety snapshot before destructive replace (no share dialog).
 			try {
 				const safety = await backup.createBackup()
 				await writeCacheTextFile(
@@ -178,23 +187,40 @@ export default function MoreScreen () {
 	return (
 		<Screen scroll>
 			<AppText variant="title">Ещё</AppText>
-			<AppText muted>
-				Данные хранятся на устройстве.
-			</AppText>
+			<AppText muted>Данные хранятся на устройстве.</AppText>
+
+			<SurfaceCard>
+				<AppText variant="subtitle">Интерфейс</AppText>
+				<AppText muted style={styles.sectionHint}>
+					Тема
+				</AppText>
+				<View style={styles.themeRow}>
+					{THEME_PREFERENCES.map((option) => (
+						<ThemeChip
+							key={option}
+							label={THEME_PREFERENCE_LABELS[option]}
+							selected={preference === option}
+							disabled={busy}
+							onPress={() => {
+								void setPreference(option as ThemePreference)
+							}}
+						/>
+					))}
+				</View>
+			</SurfaceCard>
 
 			<SurfaceCard>
 				<AppText variant="subtitle">Данные</AppText>
-
 				<ActionRow
-					title="Создать резервную копию"
-					subtitle="Сохраните тренировки, шаблоны и свои упражнения."
+					title="Резервная копия"
+					subtitle="Создать файл со всеми данными."
 					disabled={busy}
 					onPress={() => {
 						void handleCreateBackup()
 					}}
 				/>
 				<ActionRow
-					title="Восстановить из копии"
+					title="Восстановить"
 					subtitle="Заменить текущие данные из резервной копии."
 					disabled={busy}
 					onPress={() => {
@@ -202,14 +228,13 @@ export default function MoreScreen () {
 					}}
 				/>
 				<ActionRow
-					title="Экспорт тренировок в CSV"
-					subtitle="CSV для Excel и таблиц. Только выполненные подходы."
+					title="Экспорт тренировок"
+					subtitle="CSV для Excel и таблиц."
 					disabled={busy}
 					onPress={() => {
 						void handleExportCsv()
 					}}
 				/>
-
 				{busy ? (
 					<View style={styles.busyRow}>
 						<ActivityIndicator color={palette.primary} />
@@ -224,10 +249,53 @@ export default function MoreScreen () {
 					Мой спортзал — офлайн-дневник силовых тренировок.
 				</AppText>
 				<AppText variant="caption" muted>
-					Версия схемы данных: {schemaVersion}
+					Версия {appVersion}
+					{Constants.expoConfig?.android?.versionCode
+						? ` (${Constants.expoConfig.android.versionCode})`
+						: ''}
+				</AppText>
+				<AppText variant="caption" muted>
+					Схема данных: {schemaVersion}
 				</AppText>
 			</SurfaceCard>
 		</Screen>
+	)
+}
+
+type ThemeChipProps = {
+	label: string
+	selected: boolean
+	disabled?: boolean
+	onPress: () => void
+}
+
+function ThemeChip ({ label, selected, disabled, onPress }: ThemeChipProps) {
+	const palette = useThemeColors()
+	return (
+		<Pressable
+			accessibilityRole="button"
+			accessibilityState={{ selected }}
+			accessibilityLabel={`Тема: ${label}`}
+			disabled={disabled}
+			onPress={onPress}
+			style={({ pressed }) => [
+				styles.chip,
+				{
+					backgroundColor: selected
+						? palette.primary
+						: palette.surfaceElevated,
+					borderColor: selected ? palette.primary : palette.border,
+					opacity: disabled ? 0.5 : pressed ? 0.88 : 1,
+				},
+			]}
+		>
+			<AppText
+				variant="caption"
+				style={{ color: selected ? palette.onPrimary : palette.text }}
+			>
+				{label}
+			</AppText>
+		</Pressable>
 	)
 }
 
@@ -260,6 +328,23 @@ function ActionRow ({ title, subtitle, disabled, onPress }: ActionRowProps) {
 }
 
 const styles = StyleSheet.create({
+	sectionHint: {
+		marginTop: spacing.xxs,
+	},
+	themeRow: {
+		flexDirection: 'row',
+		flexWrap: 'wrap',
+		gap: spacing.xs,
+		paddingTop: spacing.sm,
+	},
+	chip: {
+		minHeight: touchTarget.minHeight,
+		paddingHorizontal: spacing.md,
+		borderRadius: radius.md,
+		borderWidth: StyleSheet.hairlineWidth,
+		alignItems: 'center',
+		justifyContent: 'center',
+	},
 	action: {
 		minHeight: touchTarget.minHeight,
 		paddingVertical: spacing.sm,

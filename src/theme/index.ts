@@ -9,3 +9,7 @@ export {
 	typography,
 	type ColorPalette,
 } from './tokens'
+export {
+	useResolvedColorScheme,
+	useThemeColors,
+} from './use-theme-colors'

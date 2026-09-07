@@ -31,3 +31,7 @@ export {
 	createBackupService,
 	csvFileName,
 } from './services/backup-service'
+export {
+	PreferencesService,
+	createPreferencesService,
+} from './services/preferences-service'

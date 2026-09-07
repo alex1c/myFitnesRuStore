@@ -34,7 +34,7 @@ export function PersonalRecordBanner ({ event, onDismiss }: Props) {
 			]}
 		>
 			<View style={styles.text}>
-				<AppText variant="subtitle">🏆 {event.title}</AppText>
+				<AppText variant="subtitle">Личный рекорд</AppText>
 				<AppText>{event.exerciseName}</AppText>
 				<AppText muted>{event.valueLabel}</AppText>
 			</View>

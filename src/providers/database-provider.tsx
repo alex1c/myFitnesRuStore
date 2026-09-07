@@ -17,6 +17,7 @@ import {
 	Pressable,
 	StyleSheet,
 	Text,
+	useColorScheme,
 	View,
 } from 'react-native'
 
@@ -76,6 +77,9 @@ function buildServices (
 }
 
 export function DatabaseProvider ({ children }: Props) {
+	const systemScheme = useColorScheme()
+	const bootPalette =
+		systemScheme === 'dark' ? colors.dark : colors.light
 	const [status, setStatus] = useState<Status>({ kind: 'loading' })
 	const [attempt, setAttempt] = useState(0)
 	const readyRef = useRef<DatabaseContextValue | null>(null)
@@ -150,28 +154,46 @@ export function DatabaseProvider ({ children }: Props) {
 
 	if (status.kind === 'loading') {
 		return (
-			<View style={styles.centered}>
-				<ActivityIndicator size="large" color={colors.light.primary} />
+			<View
+				style={[
+					styles.centered,
+					{ backgroundColor: bootPalette.background },
+				]}
+			>
+				<ActivityIndicator size="large" color={bootPalette.primary} />
 			</View>
 		)
 	}
 
 	if (status.kind === 'error') {
 		return (
-			<View style={styles.centered}>
-				<Text style={styles.errorTitle}>{status.message}</Text>
-				<Text style={styles.errorHint}>
+			<View
+				style={[
+					styles.centered,
+					{ backgroundColor: bootPalette.background },
+				]}
+			>
+				<Text style={[styles.errorTitle, { color: bootPalette.text }]}>
+					{status.message}
+				</Text>
+				<Text style={[styles.errorHint, { color: bootPalette.textMuted }]}>
 					Проверьте свободное место на устройстве и попробуйте снова.
 				</Text>
 				<Pressable
 					accessibilityRole="button"
+					accessibilityLabel="Повторить"
 					onPress={handleRetry}
 					style={({ pressed }) => [
 						styles.retryButton,
+						{ backgroundColor: bootPalette.primary },
 						pressed && styles.retryPressed,
 					]}
 				>
-					<Text style={styles.retryLabel}>Повторить</Text>
+					<Text
+						style={[styles.retryLabel, { color: bootPalette.onPrimary }]}
+					>
+						Повторить
+					</Text>
 				</Pressable>
 			</View>
 		)
@@ -226,17 +248,14 @@ const styles = StyleSheet.create({
 		alignItems: 'center',
 		justifyContent: 'center',
 		paddingHorizontal: spacing.lg,
-		backgroundColor: colors.light.background,
 		gap: spacing.md,
 	},
 	errorTitle: {
 		...typography.title,
-		color: colors.light.text,
 		textAlign: 'center',
 	},
 	errorHint: {
 		...typography.body,
-		color: colors.light.textMuted,
 		textAlign: 'center',
 	},
 	retryButton: {
@@ -245,7 +264,6 @@ const styles = StyleSheet.create({
 		minWidth: 160,
 		paddingHorizontal: spacing.lg,
 		borderRadius: radius.md,
-		backgroundColor: colors.light.primary,
 		alignItems: 'center',
 		justifyContent: 'center',
 	},
@@ -254,6 +272,5 @@ const styles = StyleSheet.create({
 	},
 	retryLabel: {
 		...typography.subtitle,
-		color: colors.light.onPrimary,
 	},
 })

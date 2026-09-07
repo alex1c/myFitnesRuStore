@@ -229,6 +229,7 @@ export default function ActiveWorkoutScreen () {
 								<View style={styles.blockActions}>
 									<SmallButton
 										label="↑"
+										accessibilityLabel="Переместить упражнение вверх"
 										disabled={index === 0}
 										onPress={() => {
 											void workouts
@@ -238,6 +239,7 @@ export default function ActiveWorkoutScreen () {
 									/>
 									<SmallButton
 										label="↓"
+										accessibilityLabel="Переместить упражнение вниз"
 										disabled={index === detail.exercises.length - 1}
 										onPress={() => {
 											void workouts
@@ -511,14 +513,19 @@ function SmallButton ({
 	label,
 	onPress,
 	disabled,
+	accessibilityLabel,
 }: {
 	label: string
 	onPress: () => void
 	disabled?: boolean
+	accessibilityLabel: string
 }) {
 	const palette = useThemeColors()
 	return (
 		<Pressable
+			accessibilityRole="button"
+			accessibilityLabel={accessibilityLabel}
+			accessibilityState={{ disabled: Boolean(disabled) }}
 			disabled={disabled}
 			onPress={onPress}
 			style={[

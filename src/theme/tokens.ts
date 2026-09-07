@@ -73,6 +73,10 @@ export type ColorPalette = {
 	primaryMuted: string
 	accent: string
 	success: string
+	/** Subtle completed-set / success surface (not full green fill). */
+	successMuted: string
+	/** Text/icon on solid success fills. */
+	onSuccess: string
 	danger: string
 	tabBar: string
 	tabInactive: string
@@ -96,6 +100,8 @@ export const colors: { light: ColorPalette; dark: ColorPalette } = {
 		primaryMuted: '#D8EBE5',
 		accent: '#2A8F7A',
 		success: '#2E7D4F',
+		successMuted: '#E4F2EA',
+		onSuccess: '#FFFFFF',
 		danger: '#C4473A',
 		tabBar: '#FFFFFF',
 		tabInactive: '#8A9791',
@@ -113,6 +119,8 @@ export const colors: { light: ColorPalette; dark: ColorPalette } = {
 		primaryMuted: '#1E3A33',
 		accent: '#4DBDA4',
 		success: '#4CAF70',
+		successMuted: '#1A2E24',
+		onSuccess: '#0B1512',
 		danger: '#E06B5E',
 		tabBar: '#1A221F',
 		tabInactive: '#7A8882',

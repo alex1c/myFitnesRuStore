@@ -166,6 +166,20 @@ Data portability:
 
 Not in Phase 7: CSV import, cloud sync, body measurements, ads.
 
+## Phase 8
+
+UI polish & settings:
+
+- System / Light / Dark theme (persisted in `app_meta`)
+- «Ещё» as settings hub (theme + data + about)
+- active workout / set row / rest timer UX polish
+- accessibility labels and touch targets
+- Russian copy / formatting consistency
+
+`Native Android rest notification QA pending`.
+
+Not in Phase 8: ads, AppMetrica, body measurements, cloud.
+
 ## Package
 
 - App name: `Мой спортзал`

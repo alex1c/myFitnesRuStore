@@ -15,7 +15,7 @@ import {
 	weightFieldLabel,
 } from '@/src/features/workout/labels'
 import { parseDecimalInput } from '@/src/utils/parse-decimal'
-import { radius, spacing, typography } from '@/src/theme'
+import { radius, spacing, touchTarget, typography } from '@/src/theme'
 import { useThemeColors } from '@/src/theme/use-theme-colors'
 
 type Props = {
@@ -188,19 +188,26 @@ export function WorkoutSetRow ({
 		}
 	}
 
+	const completed = Boolean(set.completedAt)
+
 	return (
 		<View
 			style={[
 				styles.row,
 				{
-					backgroundColor: set.completedAt
-						? palette.primaryMuted
+					backgroundColor: completed
+						? palette.successMuted
 						: palette.surfaceElevated,
-					borderColor: palette.border,
+					borderColor: completed ? palette.success : palette.border,
 				},
 			]}
 		>
-			<Pressable onPress={() => onChangeType(set.id)} style={styles.index}>
+			<Pressable
+				accessibilityRole="button"
+				accessibilityLabel={`Тип подхода ${index + 1}`}
+				onPress={() => onChangeType(set.id)}
+				style={styles.index}
+			>
 				<AppText variant="caption">
 					{index + 1}
 					{set.setType !== 'working'
@@ -208,13 +215,23 @@ export function WorkoutSetRow ({
 						: ''}
 				</AppText>
 			</Pressable>
-			<AppText variant="caption" muted style={styles.prev}>
+			<AppText
+				variant="caption"
+				muted
+				style={styles.prev}
+				numberOfLines={1}
+			>
 				{previousSetLabel(previous)}
 			</AppText>
 
 			{showWeight ? (
 				<View style={styles.metric}>
-					<Pressable onPress={() => adjustWeight(-step)} style={styles.step}>
+					<Pressable
+						accessibilityRole="button"
+						accessibilityLabel="Уменьшить вес"
+						onPress={() => adjustWeight(-step)}
+						style={styles.step}
+					>
 						<AppText>−</AppText>
 					</Pressable>
 					<TextInput
@@ -224,15 +241,21 @@ export function WorkoutSetRow ({
 							void handleBlurSave()
 						}}
 						keyboardType="decimal-pad"
-						editable={!set.completedAt}
+						editable={!completed}
 						style={[
 							styles.input,
 							{ color: palette.text, borderColor: palette.border },
 						]}
 						placeholder={weightFieldLabel(tracking)}
 						placeholderTextColor={palette.textMuted}
+						accessibilityLabel="Вес"
 					/>
-					<Pressable onPress={() => adjustWeight(step)} style={styles.step}>
+					<Pressable
+						accessibilityRole="button"
+						accessibilityLabel="Увеличить вес"
+						onPress={() => adjustWeight(step)}
+						style={styles.step}
+					>
 						<AppText>+</AppText>
 					</Pressable>
 				</View>
@@ -240,7 +263,12 @@ export function WorkoutSetRow ({
 
 			{showReps ? (
 				<View style={styles.metric}>
-					<Pressable onPress={() => adjustReps(-1)} style={styles.step}>
+					<Pressable
+						accessibilityRole="button"
+						accessibilityLabel="Уменьшить повторения"
+						onPress={() => adjustReps(-1)}
+						style={styles.step}
+					>
 						<AppText>−</AppText>
 					</Pressable>
 					<TextInput
@@ -250,15 +278,21 @@ export function WorkoutSetRow ({
 							void handleBlurSave()
 						}}
 						keyboardType="number-pad"
-						editable={!set.completedAt}
+						editable={!completed}
 						style={[
 							styles.input,
 							{ color: palette.text, borderColor: palette.border },
 						]}
 						placeholder="повт"
 						placeholderTextColor={palette.textMuted}
+						accessibilityLabel="Повторения"
 					/>
-					<Pressable onPress={() => adjustReps(1)} style={styles.step}>
+					<Pressable
+						accessibilityRole="button"
+						accessibilityLabel="Увеличить повторения"
+						onPress={() => adjustReps(1)}
+						style={styles.step}
+					>
 						<AppText>+</AppText>
 					</Pressable>
 				</View>
@@ -272,7 +306,7 @@ export function WorkoutSetRow ({
 						void handleBlurSave()
 					}}
 					keyboardType="number-pad"
-					editable={!set.completedAt}
+					editable={!completed}
 					style={[
 						styles.input,
 						styles.wideInput,
@@ -280,6 +314,7 @@ export function WorkoutSetRow ({
 					]}
 					placeholder="сек"
 					placeholderTextColor={palette.textMuted}
+					accessibilityLabel="Длительность в секундах"
 				/>
 			) : null}
 
@@ -291,7 +326,7 @@ export function WorkoutSetRow ({
 						void handleBlurSave()
 					}}
 					keyboardType="decimal-pad"
-					editable={!set.completedAt}
+					editable={!completed}
 					style={[
 						styles.input,
 						styles.wideInput,
@@ -299,31 +334,39 @@ export function WorkoutSetRow ({
 					]}
 					placeholder="км"
 					placeholderTextColor={palette.textMuted}
+					accessibilityLabel="Расстояние"
 				/>
 			) : null}
 
 			<Pressable
 				accessibilityRole="button"
+				accessibilityLabel={
+					completed ? 'Снять выполнение подхода' : 'Отметить подход выполненным'
+				}
+				accessibilityState={{ checked: completed, busy }}
 				onPress={() => {
 					void handleComplete().catch((error: unknown) => {
 						const message =
 							error instanceof Error ? error.message : 'Не удалось сохранить'
-						// Parent should also catch; local no-op if thrown through.
 						console.warn(message)
 					})
 				}}
 				style={[
 					styles.check,
 					{
-						backgroundColor: set.completedAt
+						backgroundColor: completed
 							? palette.success
 							: palette.surface,
-						borderColor: set.completedAt ? palette.success : palette.border,
+						borderColor: completed ? palette.success : palette.border,
 					},
 				]}
 			>
-				<AppText style={{ color: set.completedAt ? '#fff' : palette.text }}>
-					{set.completedAt ? '✓' : '○'}
+				<AppText
+					style={{
+						color: completed ? palette.onSuccess : palette.text,
+					}}
+				>
+					{completed ? '✓' : '○'}
 				</AppText>
 			</Pressable>
 		</View>
@@ -334,19 +377,21 @@ const styles = StyleSheet.create({
 	row: {
 		flexDirection: 'row',
 		alignItems: 'center',
-		gap: spacing.xs,
+		gap: spacing.xxs,
 		borderWidth: StyleSheet.hairlineWidth,
 		borderRadius: radius.sm,
 		paddingHorizontal: spacing.xs,
-		paddingVertical: spacing.xs,
-		minHeight: 48,
+		paddingVertical: spacing.xxs,
+		minHeight: touchTarget.minHeight,
 	},
 	index: {
 		width: 28,
+		minHeight: touchTarget.minHeight,
 		alignItems: 'center',
+		justifyContent: 'center',
 	},
 	prev: {
-		width: 56,
+		width: 52,
 	},
 	metric: {
 		flexDirection: 'row',
@@ -355,8 +400,8 @@ const styles = StyleSheet.create({
 		gap: 2,
 	},
 	step: {
-		minWidth: 32,
-		minHeight: 40,
+		minWidth: 36,
+		minHeight: touchTarget.minHeight,
 		alignItems: 'center',
 		justifyContent: 'center',
 	},
@@ -365,7 +410,7 @@ const styles = StyleSheet.create({
 		minHeight: 40,
 		borderWidth: StyleSheet.hairlineWidth,
 		borderRadius: radius.sm,
-		paddingHorizontal: spacing.xs,
+		paddingHorizontal: spacing.xxs,
 		textAlign: 'center',
 		...typography.body,
 	},
@@ -374,8 +419,8 @@ const styles = StyleSheet.create({
 		flex: 1,
 	},
 	check: {
-		minWidth: 44,
-		minHeight: 44,
+		minWidth: touchTarget.minWidth,
+		minHeight: touchTarget.minHeight,
 		borderRadius: radius.sm,
 		borderWidth: StyleSheet.hairlineWidth,
 		alignItems: 'center',

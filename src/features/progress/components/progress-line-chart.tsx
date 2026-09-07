@@ -26,16 +26,22 @@ export function ProgressLineChart ({ points, height = 180 }: Props) {
 		}
 		const padX = 28
 		const padY = 20
-		const values = points.map((point) => point.value)
+		const values = points
+			.map((point) => point.value)
+			.filter((value) => Number.isFinite(value))
+		if (values.length < 2) {
+			return null
+		}
 		const minY = Math.min(...values)
 		const maxY = Math.max(...values)
 		const spanY = maxY - minY || 1
 		const stepX = (width - padX * 2) / (points.length - 1)
 
 		const mapped = points.map((point, index) => {
+			const safeValue = Number.isFinite(point.value) ? point.value : minY
 			const x = padX + index * stepX
 			const y =
-				padY + ((maxY - point.value) / spanY) * (height - padY * 2)
+				padY + ((maxY - safeValue) / spanY) * (height - padY * 2)
 			return { x, y, point }
 		})
 
@@ -71,7 +77,7 @@ export function ProgressLineChart ({ points, height = 180 }: Props) {
 						key={item.point.workoutId}
 						cx={item.x}
 						cy={item.y}
-						r={4}
+						r={3}
 						fill={palette.primary}
 					/>
 				))}
