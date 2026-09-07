@@ -180,6 +180,20 @@ UI polish & settings:
 
 Not in Phase 8: ads, AppMetrica, body measurements, cloud.
 
+## Phase 9
+
+Product analytics (AppMetrica only — no ads):
+
+- package: `@appmetrica/react-native-analytics` **4.2.0**
+- production API key configured in `src/services/analytics/config.ts`
+- typed privacy-conscious events (`workout_started`, `set_completed`, …)
+- custom events do **not** send workout/template/exercise names, notes, exact weight/reps, or file paths
+- AppMetrica used for product analytics / crash diagnostics (SDK defaults); location tracking disabled in our activate config
+
+`Native Android rest notification QA pending`.
+
+Not in Phase 9: Yandex Mobile Ads, banners, interstitial.
+
 ## Package
 
 - App name: `Мой спортзал`

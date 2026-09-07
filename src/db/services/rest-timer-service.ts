@@ -11,6 +11,7 @@ import {
 	resolveRestSeconds,
 } from '@/src/features/workout/rest-timer-logic'
 import type { RestNotificationClient } from '@/src/services/notifications/rest-notification-client'
+import { analytics } from '@/src/services/analytics'
 import { createId } from '@/src/utils/id'
 import { nowIso } from '@/src/utils/dates'
 import type { AppDatabase } from '../client'
@@ -124,6 +125,9 @@ export class RestTimerService {
 		})
 
 		const workout = await this.workouts.getWorkoutById(input.workoutId)
+		if (workout) {
+			analytics.trackRestTimerStarted(duration)
+		}
 		return {
 			timer: workout ? toActiveTimer(workout) : null,
 			permissionPromptNeeded,
@@ -166,6 +170,10 @@ export class RestTimerService {
 			exerciseName: null,
 		})
 
+		analytics.trackRestTimerAdjusted(
+			deltaSeconds >= 0 ? 'increase' : 'decrease',
+		)
+
 		const updated = await this.workouts.getWorkoutById(workoutId)
 		return updated ? toActiveTimer(updated) : null
 	}
@@ -180,6 +188,7 @@ export class RestTimerService {
 
 	async skip (workoutId: string): Promise<void> {
 		await this.clearTimer(workoutId, { cancelNotification: true })
+		analytics.trackRestTimerSkipped()
 	}
 
 	/**

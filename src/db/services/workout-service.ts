@@ -33,6 +33,10 @@ import {
 	ProgressService,
 	type PersonalRecordEvent,
 } from './progress-service'
+import {
+	analytics,
+	durationSecondsBetween,
+} from '@/src/services/analytics'
 
 export class ActiveWorkoutExistsError extends Error {
 	constructor (public readonly activeWorkout: Workout) {
@@ -164,6 +168,15 @@ export class WorkoutService {
 		if (!created) {
 			throw new Error('Не удалось открыть тренировку')
 		}
+		const plannedSetCount = created.exercises.reduce(
+			(sum, block) => sum + block.sets.length,
+			0,
+		)
+		analytics.trackWorkoutStarted({
+			source: 'template',
+			exercise_count: created.exercises.length,
+			planned_set_count: plannedSetCount,
+		})
 		return created
 	}
 
@@ -180,6 +193,11 @@ export class WorkoutService {
 		if (!detail) {
 			throw new Error('Не удалось открыть тренировку')
 		}
+		analytics.trackWorkoutStarted({
+			source: 'quick',
+			exercise_count: detail.exercises.length,
+			planned_set_count: 0,
+		})
 		return detail
 	}
 
@@ -456,6 +474,11 @@ export class WorkoutService {
 			exerciseName: exercise?.name,
 		})
 
+		analytics.trackSetCompleted({
+			tracking_type: exercise?.trackingType ?? 'weight_reps',
+			set_type: updated.setType,
+		})
+
 		return { set: updated, rest, records }
 	}
 
@@ -495,7 +518,7 @@ export class WorkoutService {
 	}
 
 	async finishWorkout (workoutId: string): Promise<WorkoutDetail> {
-		await this.requireActive(workoutId)
+		const before = await this.requireActive(workoutId)
 		await this.restTimer.clearForWorkoutEnd(workoutId)
 		await this.workouts.updateWorkout(workoutId, {
 			finishedAt: nowIso(),
@@ -504,6 +527,25 @@ export class WorkoutService {
 		if (!detail) {
 			throw new Error('Тренировка не найдена')
 		}
+		const completedSetCount = detail.exercises.reduce(
+			(sum, block) =>
+				sum + block.sets.filter((set) => set.completedAt).length,
+			0,
+		)
+		const exerciseCount = detail.exercises.filter((block) =>
+			block.sets.some((set) => set.completedAt),
+		).length
+		const finishedAtMs = detail.workout.finishedAt
+			? Date.parse(detail.workout.finishedAt)
+			: Date.now()
+		analytics.trackWorkoutCompleted({
+			duration_seconds: durationSecondsBetween(
+				before.startedAt,
+				Number.isFinite(finishedAtMs) ? finishedAtMs : Date.now(),
+			),
+			completed_set_count: completedSetCount,
+			exercise_count: exerciseCount,
+		})
 		return detail
 	}
 
@@ -515,8 +557,15 @@ export class WorkoutService {
 		if (workout.finishedAt) {
 			throw new Error('Нельзя отменить завершённую тренировку')
 		}
+		const completedSetCount =
+			await this.workouts.countCompletedSetsInWorkout(workoutId)
+		const durationSeconds = durationSecondsBetween(workout.startedAt)
 		await this.restTimer.clearForWorkoutEnd(workoutId)
 		await this.workouts.deleteWorkout(workoutId)
+		analytics.trackWorkoutDiscarded({
+			duration_seconds: durationSeconds,
+			completed_set_count: completedSetCount,
+		})
 	}
 
 	async getHistorySummaries (): Promise<{
@@ -659,6 +708,15 @@ export class WorkoutService {
 		if (!created) {
 			throw new Error('Не удалось создать тренировку')
 		}
+		const plannedSetCount = created.exercises.reduce(
+			(sum, block) => sum + block.sets.length,
+			0,
+		)
+		analytics.trackWorkoutStarted({
+			source: 'repeat',
+			exercise_count: created.exercises.length,
+			planned_set_count: plannedSetCount,
+		})
 		return created
 	}
 

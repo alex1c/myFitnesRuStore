@@ -5,6 +5,8 @@ module.exports = {
 	testMatch: ['**/__tests__/**/*.test.ts'],
 	moduleNameMapper: {
 		'^@/(.*)$': '<rootDir>/$1',
+		'^@appmetrica/react-native-analytics$':
+			'<rootDir>/src/services/analytics/__mocks__/appmetrica.ts',
 	},
 	transform: {
 		'^.+\\.(ts|tsx)$': [

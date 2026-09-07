@@ -13,6 +13,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@appmetrica/react-native-analytics": "^4.2.0",
     "expo": "~57.0.20",
     "expo-constants": "~57.0.17",
     "expo-document-picker": "~57.0.1",

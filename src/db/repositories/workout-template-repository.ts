@@ -10,6 +10,7 @@ import type {
 	WorkoutTemplateDetail,
 } from '@/src/domain/types'
 import { validateTemplateName } from '@/src/features/templates/form-validation'
+import { analytics } from '@/src/services/analytics'
 import type { AppDatabase } from '../client'
 import { createId } from '@/src/utils/id'
 import { nowIso } from '@/src/utils/dates'
@@ -88,6 +89,7 @@ export class WorkoutTemplateRepository {
 		if (!created) {
 			throw new Error('Failed to read template after create')
 		}
+		analytics.trackTemplateCreated({ exercise_count: 0 })
 		return created
 	}
 
@@ -272,6 +274,9 @@ export class WorkoutTemplateRepository {
 		if (!created) {
 			throw new Error('Failed to read duplicated template')
 		}
+		analytics.trackTemplateDuplicated({
+			exercise_count: detail.exercises.length,
+		})
 		return created
 	}
 

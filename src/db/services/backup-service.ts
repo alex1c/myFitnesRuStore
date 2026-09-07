@@ -17,6 +17,7 @@ import {
 	type CsvSetRow,
 } from '@/src/features/backup/csv'
 import { nowIso } from '@/src/utils/dates'
+import { analytics } from '@/src/services/analytics'
 import type { AppDatabase } from '../client'
 import { upsertBuiltinExercises } from '../seed/seed-builtin-exercises'
 
@@ -56,6 +57,7 @@ export class BackupService {
 			await this.insertUserData(backup.data)
 			await this.assertPostRestoreIntegrity(backup.data)
 		})
+		analytics.trackRestoreCompleted()
 	}
 
 	async exportCompletedSetsCsv (): Promise<string> {

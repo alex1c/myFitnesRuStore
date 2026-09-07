@@ -4,13 +4,27 @@
 import { assertTrackingType } from '@/src/domain/validation'
 import type {
 	CreateExerciseInput,
+	Equipment,
 	Exercise,
 	UpdateExerciseInput,
 } from '@/src/domain/types'
 import { EXERCISE_NAME_MAX_LENGTH } from '@/src/domain/types'
+import { analytics } from '@/src/services/analytics'
 import type { AppDatabase } from '../client'
 import { createId } from '@/src/utils/id'
 import { nowIso } from '@/src/utils/dates'
+
+const KNOWN_EQUIPMENT: readonly Equipment[] = [
+	'barbell',
+	'dumbbell',
+	'machine',
+	'cable',
+	'bodyweight',
+	'kettlebell',
+	'band',
+	'cardio_machine',
+	'other',
+]
 
 type ExerciseRow = {
 	id: string
@@ -124,6 +138,17 @@ export class ExerciseRepository {
 		const created = await this.getById(id)
 		if (!created) {
 			throw new Error('Failed to read exercise after create')
+		}
+		if (created.isCustom) {
+			const equipment = created.equipment
+			analytics.trackCustomExerciseCreated({
+				tracking_type: created.trackingType,
+				equipment_category: KNOWN_EQUIPMENT.includes(
+					equipment as Equipment,
+				)
+					? equipment
+					: undefined,
+			})
 		}
 		return created
 	}

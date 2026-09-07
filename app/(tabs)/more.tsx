@@ -29,6 +29,7 @@ import {
 	useDatabase,
 } from '@/src/providers/database-provider'
 import { useThemePreference } from '@/src/providers/theme-preference-provider'
+import { analytics } from '@/src/services/analytics'
 import { radius, spacing, touchTarget } from '@/src/theme'
 import { useThemeColors } from '@/src/theme/use-theme-colors'
 import { getAppVersion } from '@/src/utils/app-version'
@@ -65,6 +66,7 @@ export default function MoreScreen () {
 			const contents = backup.serializeBackup(payload)
 			uri = await writeCacheTextFile(backupFileName(), contents)
 			await shareFile(uri, 'application/json')
+			analytics.trackBackupCreated()
 			Alert.alert('Резервная копия создана')
 		} catch (error) {
 			if (isUserCancelled(error)) {
@@ -167,6 +169,7 @@ export default function MoreScreen () {
 			const csv = await backup.exportCompletedSetsCsv()
 			uri = await writeCacheTextFile(csvFileName(), csv)
 			await shareFile(uri, 'text/csv')
+			analytics.trackCsvExported()
 			Alert.alert('Экспорт готов')
 		} catch (error) {
 			if (isUserCancelled(error)) {
