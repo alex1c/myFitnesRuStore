@@ -1,7 +1,8 @@
 /**
- * Ещё — theme, data portability, about.
+ * Ещё — theme, help, data portability, about.
  */
 import Constants from 'expo-constants'
+import { useRouter } from 'expo-router'
 import React, { useCallback, useState } from 'react'
 import { ActivityIndicator, Alert, Pressable, StyleSheet, View } from 'react-native'
 
@@ -50,6 +51,7 @@ function isUserCancelled (error: unknown): boolean {
 
 export default function MoreScreen () {
 	const palette = useThemeColors()
+	const router = useRouter()
 	const { schemaVersion, refreshAfterRestore } = useDatabase()
 	const backup = useBackupService()
 	const { preference, setPreference } = useThemePreference()
@@ -214,6 +216,18 @@ export default function MoreScreen () {
 			</SurfaceCard>
 
 			<SurfaceCard>
+				<AppText variant="subtitle">Помощь</AppText>
+				<ActionRow
+					title="Как пользоваться"
+					subtitle="Коротко о тренировках, подходах и прогрессе"
+					disabled={busy}
+					onPress={() => {
+						router.push('/help/how-to-use')
+					}}
+				/>
+			</SurfaceCard>
+
+			<SurfaceCard>
 				<AppText variant="subtitle">Данные</AppText>
 				<ActionRow
 					title="Резервная копия"
@@ -317,6 +331,7 @@ function ActionRow ({ title, subtitle, disabled, onPress }: ActionRowProps) {
 	return (
 		<Pressable
 			accessibilityRole="button"
+			accessibilityLabel={title}
 			disabled={disabled}
 			onPress={onPress}
 			style={({ pressed }) => [

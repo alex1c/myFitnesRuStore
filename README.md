@@ -217,6 +217,19 @@ Privacy note: Yandex Mobile Ads is used for monetization with standard SDK data 
 
 Not in Phase 10: release packaging, RuStore listing copy, privacy policy finalization.
 
+## Phase 11
+
+In-app learning (offline):
+
+- «Ещё → Помощь → Как пользоваться» — always available
+- optional Today first-use card (`Первый раз здесь?`) for users with no history
+- dismissible via `onboarding_help_dismissed` in `app_meta` (not in backup)
+- 8 short practical lessons; no ads on the help screen; AppMetrica unchanged
+
+Product standard: main scenarios must be explainable to a beginner inside the app. See `docs/in-app-learning-standard.md`.
+
+Not in Phase 11: release packaging, new product features beyond the guide.
+
 ## Package
 
 - App name: `Мой спортзал`

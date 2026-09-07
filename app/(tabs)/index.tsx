@@ -9,13 +9,15 @@ import { AppText } from '@/src/components/app-text'
 import { Screen } from '@/src/components/screen'
 import { AppBannerSlot } from '@/src/features/ads/app-banner-slot'
 import type { TemplateExercise, Workout, WorkoutTemplate } from '@/src/domain/types'
-import { ActiveWorkoutExistsError } from '@/src/db'
+import { ActiveWorkoutExistsError, PreferencesService } from '@/src/db'
+import { shouldShowOnboardingHelpCard } from '@/src/features/help/onboarding-visibility'
 import { TemplateListCard } from '@/src/features/templates/components/template-list-card'
 import { formatSetCount } from '@/src/features/templates/summary'
 import {
 	formatActiveWorkoutDuration,
 } from '@/src/features/workout/set-logic'
 import {
+	useDatabase,
 	useTemplateRepository,
 	useWorkoutService,
 } from '@/src/providers/database-provider'
@@ -30,12 +32,14 @@ type TemplateCardData = {
 export default function TodayScreen () {
 	const palette = useThemeColors()
 	const router = useRouter()
+	const { db } = useDatabase()
 	const templates = useTemplateRepository()
 	const workouts = useWorkoutService()
 	const [cards, setCards] = useState<TemplateCardData[]>([])
 	const [active, setActive] = useState<Workout | null>(null)
 	const [activeCompletedSets, setActiveCompletedSets] = useState(0)
 	const [isLoading, setIsLoading] = useState(true)
+	const [showHelpCard, setShowHelpCard] = useState(false)
 
 	const load = useCallback(async () => {
 		setIsLoading(true)
@@ -59,16 +63,35 @@ export default function TodayScreen () {
 				})),
 			)
 			setCards(withExercises)
+
+			const prefs = new PreferencesService(db)
+			const [dismissed, finishedWorkoutCount] = await Promise.all([
+				prefs.isOnboardingHelpDismissed(),
+				workouts.progress.countFinishedWorkouts(null),
+			])
+			setShowHelpCard(
+				shouldShowOnboardingHelpCard({
+					dismissed,
+					hasActiveWorkout: activeWorkout !== null,
+					finishedWorkoutCount,
+				}),
+			)
 		} finally {
 			setIsLoading(false)
 		}
-	}, [templates, workouts])
+	}, [db, templates, workouts])
 
 	useFocusEffect(
 		useCallback(() => {
 			void load()
 		}, [load]),
 	)
+
+	const handleDismissHelp = useCallback(async () => {
+		const prefs = new PreferencesService(db)
+		await prefs.setOnboardingHelpDismissed(true)
+		setShowHelpCard(false)
+	}, [db])
 
 	const startWithGuard = async (action: () => Promise<{ workout: { id: string } }>) => {
 		try {
@@ -124,6 +147,54 @@ export default function TodayScreen () {
 				<AppText muted>Загрузка…</AppText>
 			) : (
 				<>
+					{showHelpCard ? (
+						<View
+							style={[
+								styles.helpCard,
+								{
+									backgroundColor: palette.surface,
+									borderColor: palette.border,
+								},
+							]}
+						>
+							<AppText variant="subtitle">Первый раз здесь?</AppText>
+							<AppText muted>
+								Покажем, как провести первую тренировку.
+							</AppText>
+							<Pressable
+								accessibilityRole="button"
+								accessibilityLabel="Как пользоваться"
+								onPress={() => router.push('/help/how-to-use')}
+								style={[
+									styles.primaryButton,
+									{ backgroundColor: palette.primary },
+								]}
+							>
+								<AppText
+									variant="subtitle"
+									style={{ color: palette.onPrimary }}
+								>
+									Как пользоваться
+								</AppText>
+							</Pressable>
+							<Pressable
+								accessibilityRole="button"
+								accessibilityLabel="Скрыть подсказку"
+								onPress={() => {
+									void handleDismissHelp()
+								}}
+								style={styles.dismissLink}
+							>
+								<AppText
+									variant="caption"
+									style={{ color: palette.primary }}
+								>
+									Скрыть
+								</AppText>
+							</Pressable>
+						</View>
+					) : null}
+
 					{active ? (
 						<View
 							style={[
@@ -275,6 +346,17 @@ export default function TodayScreen () {
 }
 
 const styles = StyleSheet.create({
+	helpCard: {
+		borderWidth: StyleSheet.hairlineWidth,
+		borderRadius: radius.lg,
+		padding: spacing.lg,
+		gap: spacing.sm,
+	},
+	dismissLink: {
+		alignSelf: 'flex-start',
+		minHeight: 40,
+		justifyContent: 'center',
+	},
 	activeCard: {
 		borderWidth: StyleSheet.hairlineWidth,
 		borderRadius: radius.lg,

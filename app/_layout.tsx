@@ -83,6 +83,7 @@ export default function RootLayout () {
 						<Stack.Screen name="templates" options={{ headerShown: false }} />
 						<Stack.Screen name="workout" options={{ headerShown: false }} />
 						<Stack.Screen name="progress" options={{ headerShown: false }} />
+						<Stack.Screen name="help" options={{ headerShown: false }} />
 					</Stack>
 				</ThemedNavigation>
 			</ThemePreferenceProvider>
