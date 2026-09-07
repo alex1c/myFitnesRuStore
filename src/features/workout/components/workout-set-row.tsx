@@ -202,27 +202,60 @@ export function WorkoutSetRow ({
 				},
 			]}
 		>
-			<Pressable
-				accessibilityRole="button"
-				accessibilityLabel={`Тип подхода ${index + 1}`}
-				onPress={() => onChangeType(set.id)}
-				style={styles.index}
-			>
-				<AppText variant="caption">
-					{index + 1}
-					{set.setType !== 'working'
-						? ` ${SET_TYPE_SHORT[set.setType]}`
-						: ''}
+			<View style={styles.summary}>
+				<Pressable
+					accessibilityRole="button"
+					accessibilityLabel={`Тип подхода ${index + 1}`}
+					onPress={() => onChangeType(set.id)}
+					style={styles.index}
+				>
+					<AppText variant="caption">
+						{index + 1}
+						{set.setType !== 'working'
+							? ` ${SET_TYPE_SHORT[set.setType]}`
+							: ''}
+					</AppText>
+				</Pressable>
+				<AppText
+					variant="caption"
+					muted
+					style={styles.prev}
+					numberOfLines={1}
+				>
+					{previousSetLabel(previous)}
 				</AppText>
-			</Pressable>
-			<AppText
-				variant="caption"
-				muted
-				style={styles.prev}
-				numberOfLines={1}
-			>
-				{previousSetLabel(previous)}
-			</AppText>
+				<Pressable
+					accessibilityRole="button"
+					accessibilityLabel={
+						completed ? 'Снять выполнение подхода' : 'Отметить подход выполненным'
+					}
+					accessibilityState={{ checked: completed, busy }}
+					onPress={() => {
+						void handleComplete().catch((error: unknown) => {
+							const message =
+								error instanceof Error ? error.message : 'Не удалось сохранить'
+							console.warn(message)
+						})
+					}}
+					style={[
+						styles.check,
+						{
+							backgroundColor: completed
+								? palette.success
+								: palette.surface,
+							borderColor: completed ? palette.success : palette.border,
+						},
+					]}
+				>
+					<AppText
+						style={{
+							color: completed ? palette.onSuccess : palette.text,
+						}}
+					>
+						{completed ? '✓' : '○'}
+					</AppText>
+				</Pressable>
+			</View>
 
 			{showWeight ? (
 				<View style={styles.metric}>
@@ -338,37 +371,7 @@ export function WorkoutSetRow ({
 				/>
 			) : null}
 
-			<Pressable
-				accessibilityRole="button"
-				accessibilityLabel={
-					completed ? 'Снять выполнение подхода' : 'Отметить подход выполненным'
-				}
-				accessibilityState={{ checked: completed, busy }}
-				onPress={() => {
-					void handleComplete().catch((error: unknown) => {
-						const message =
-							error instanceof Error ? error.message : 'Не удалось сохранить'
-						console.warn(message)
-					})
-				}}
-				style={[
-					styles.check,
-					{
-						backgroundColor: completed
-							? palette.success
-							: palette.surface,
-						borderColor: completed ? palette.success : palette.border,
-					},
-				]}
-			>
-				<AppText
-					style={{
-						color: completed ? palette.onSuccess : palette.text,
-					}}
-				>
-					{completed ? '✓' : '○'}
-				</AppText>
-			</Pressable>
+
 		</View>
 	)
 }
@@ -376,6 +379,7 @@ export function WorkoutSetRow ({
 const styles = StyleSheet.create({
 	row: {
 		flexDirection: 'row',
+		flexWrap: 'wrap',
 		alignItems: 'center',
 		gap: spacing.xxs,
 		borderWidth: StyleSheet.hairlineWidth,
@@ -384,6 +388,12 @@ const styles = StyleSheet.create({
 		paddingVertical: spacing.xxs,
 		minHeight: touchTarget.minHeight,
 	},
+	summary: {
+		width: '100%',
+		flexDirection: 'row',
+		alignItems: 'center',
+		gap: spacing.xs,
+	},
 	index: {
 		width: 28,
 		minHeight: touchTarget.minHeight,
@@ -391,12 +401,13 @@ const styles = StyleSheet.create({
 		justifyContent: 'center',
 	},
 	prev: {
-		width: 52,
+		flex: 1,
 	},
 	metric: {
 		flexDirection: 'row',
 		alignItems: 'center',
 		flex: 1,
+		minWidth: 124,
 		gap: 2,
 	},
 	step: {
@@ -407,6 +418,7 @@ const styles = StyleSheet.create({
 	},
 	input: {
 		flex: 1,
+		minWidth: 48,
 		minHeight: 40,
 		borderWidth: StyleSheet.hairlineWidth,
 		borderRadius: radius.sm,

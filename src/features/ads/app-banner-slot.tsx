@@ -5,7 +5,6 @@ import React, { useCallback, useEffect, useState } from 'react'
 import {
 	Platform,
 	StyleSheet,
-	useWindowDimensions,
 	View,
 } from 'react-native'
 import { useFocusEffect } from 'expo-router'
@@ -35,7 +34,7 @@ type AppBannerSlotProps = {
 export function AppBannerSlot ({ suppress }: AppBannerSlotProps) {
 	const palette = useThemeColors()
 	const workouts = useWorkoutService()
-	const { width: windowWidth } = useWindowDimensions()
+	const [availableWidth, setAvailableWidth] = useState(0)
 	// null = unknown — hide until we know there is no active workout
 	const [queriedActive, setQueriedActive] = useState<boolean | null>(null)
 	const [size, setSize] = useState<BannerSizeLike | null>(null)
@@ -73,7 +72,7 @@ export function AppBannerSlot ({ suppress }: AppBannerSlotProps) {
 	const hidden = !shouldShowBanner(hasActiveWorkout)
 
 	useEffect(() => {
-		if (hidden || Platform.OS === 'web') {
+		if (hidden || availableWidth <= 0 || Platform.OS === 'web') {
 			return
 		}
 		let cancelled = false
@@ -86,7 +85,7 @@ export function AppBannerSlot ({ suppress }: AppBannerSlotProps) {
 					}
 				}
 				const next = await BannerAdSize.stickySize(
-					Math.floor(windowWidth),
+					availableWidth,
 				)
 				if (!cancelled) {
 					setSize(next)
@@ -102,9 +101,9 @@ export function AppBannerSlot ({ suppress }: AppBannerSlotProps) {
 		return () => {
 			cancelled = true
 		}
-	}, [hidden, windowWidth])
+	}, [hidden, availableWidth])
 
-	if (hidden || failed || !size || Platform.OS === 'web') {
+	if (hidden || failed || Platform.OS === 'web') {
 		return null
 	}
 
@@ -122,19 +121,20 @@ export function AppBannerSlot ({ suppress }: AppBannerSlotProps) {
 
 	return (
 		<View
+			onLayout={(event) => setAvailableWidth(Math.floor(event.nativeEvent.layout.width))}
 			accessibilityElementsHidden
 			importantForAccessibility="no-hide-descendants"
 			style={[
 				styles.slot,
 				{
 					// Reserve height only after SDK size is known — avoids empty white gap.
-					height: loaded ? size.height : 0,
+					height: loaded && size ? size.height : 0,
 					overflow: 'hidden',
 					backgroundColor: palette.surface,
 				},
 			]}
 		>
-			<BannerView
+			{size && <BannerView
 				size={size}
 				adRequest={{ adUnitId: getBannerAdUnitId() }}
 				onAdLoaded={() => {
@@ -145,7 +145,7 @@ export function AppBannerSlot ({ suppress }: AppBannerSlotProps) {
 					setLoaded(false)
 				}}
 				style={{ width: size.width, height: size.height }}
-			/>
+			/>}
 		</View>
 	)
 }

@@ -14,6 +14,12 @@
     "android": {
       "package": "com.calculatorplatform.myfitness",
       "versionCode": 1,
+      "permissions": [
+        "android.permission.SCHEDULE_EXACT_ALARM"
+      ],
+      "blockedPermissions": [
+        "android.permission.SYSTEM_ALERT_WINDOW"
+      ],
       "adaptiveIcon": {
         "backgroundColor": "#1F6B5A",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -28,6 +34,7 @@
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
+      "./plugins/with-rest-alarm-access",
       "expo-router",
       [
         "expo-splash-screen",

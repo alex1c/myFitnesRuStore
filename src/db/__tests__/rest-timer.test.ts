@@ -24,6 +24,44 @@ async function setup () {
 }
 
 describe('rest timer workout integration', () => {
+	it('keeps a fallback alarm while exact access is declined and reconciles after access changes', async () => {
+		const { db, service, notifications, templates } = await setup()
+		const requestExactAlarmAccess = jest.fn(async () => {})
+		Object.assign(notifications, {
+			needsExactAlarmAccess: async () => true,
+			requestExactAlarmAccess,
+		})
+		const template = await templates.create({ name: 'Exact alarm QA' })
+		await templates.addExercise({ templateId: template.id, exerciseId: 'ex_sys_bench_press', plannedSets: 1, restSeconds: 90 })
+		const workout = await service.startFromTemplate(template.id)
+		await service.completeSet(workout.exercises[0]!.sets[0]!.id, { weight: 80, reps: 8 })
+		expect(service.restTimer.consumePermissionPromptNeeded()).toBe(true)
+		expect(notifications.scheduled).toHaveLength(1)
+		const fireAt = notifications.scheduled[0]!.fireAt.getTime()
+		await service.restTimer.requestNotificationPermission()
+		expect(requestExactAlarmAccess).toHaveBeenCalledTimes(1)
+		await service.restTimer.reconcileWorkout(workout.workout.id)
+		expect(notifications.scheduled).toHaveLength(1)
+		expect(notifications.scheduled[0]!.fireAt.getTime()).toBe(fireAt)
+		await db.closeAsync()
+	})
+
+	it('explains requestable notifications once per session without blocking later sets', async () => {
+		const { db, service, notifications, templates } = await setup()
+		notifications.permission = 'undetermined'
+		const template = await templates.create({ name: 'Permission QA' })
+		await templates.addExercise({ templateId: template.id, exerciseId: 'ex_sys_bench_press', plannedSets: 2, restSeconds: 90 })
+		const workout = await service.startFromTemplate(template.id)
+		await service.completeSet(workout.exercises[0]!.sets[0]!.id, { weight: 80, reps: 8 })
+		expect(service.restTimer.consumePermissionPromptNeeded()).toBe(true)
+		expect(service.restTimer.consumePermissionPromptNeeded()).toBe(false)
+		const second = await service.completeSet(workout.exercises[0]!.sets[1]!.id, { weight: 80, reps: 8 })
+		expect(second.rest.timer).not.toBeNull()
+		expect(service.restTimer.consumePermissionPromptNeeded()).toBe(false)
+		expect(notifications.scheduled).toHaveLength(0)
+		await db.closeAsync()
+	})
+
 	it('starts timer after complete set and schedules one notification', async () => {
 		const { db, service, notifications, templates } = await setup()
 		const template = await templates.create({ name: 'Грудь' })

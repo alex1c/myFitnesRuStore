@@ -167,7 +167,7 @@ const styles = StyleSheet.create({
 	},
 	actions: {
 		flexDirection: 'row',
-		gap: spacing.sm,
+		gap: spacing.xs,
 	},
 	btn: {
 		flex: 1,
@@ -180,6 +180,6 @@ const styles = StyleSheet.create({
 	},
 	skip: {
 		borderWidth: 0,
-		flex: 1.35,
+		flex: 1.7,
 	},
 })

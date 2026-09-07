@@ -5,6 +5,7 @@ import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router'
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import {
 	Alert,
+	AppState,
 	FlatList,
 	KeyboardAvoidingView,
 	Platform,
@@ -53,6 +54,12 @@ export default function ActiveWorkoutScreen () {
 	useFocusEffect(
 		useCallback(() => {
 			void load()
+			const subscription = AppState.addEventListener('change', (state) => {
+				if (state === 'active') {
+					void load()
+				}
+			})
+			return () => subscription.remove()
 		}, [load]),
 	)
 
@@ -67,10 +74,10 @@ export default function ActiveWorkoutScreen () {
 		)
 	}, [detail])
 
-	const showError = (message: string) => {
+	const showError = useCallback((message: string) => {
 		setError(message)
 		Alert.alert('Не удалось сохранить', message)
-	}
+	}, [])
 
 	const maybeAskNotificationPermission = useCallback(() => {
 		if (!workouts.restTimer.consumePermissionPromptNeeded()) {
@@ -78,18 +85,20 @@ export default function ActiveWorkoutScreen () {
 		}
 		Alert.alert(
 			'Уведомления об отдыхе',
-			'Разрешите уведомления, чтобы приложение сообщало об окончании отдыха даже при заблокированном экране.',
+			'Разрешите уведомления об окончании отдыха. На Android также разрешите точные будильники в системных настройках, чтобы сигнал приходил вовремя при заблокированном экране. Без этого Android может задерживать уведомление.',
 			[
 				{ text: 'Не сейчас', style: 'cancel' },
 				{
 					text: 'Разрешить',
 					onPress: () => {
-						void workouts.restTimer.requestNotificationPermission()
+						void workouts.restTimer.requestNotificationPermission().catch((error: unknown) => {
+							showError(error instanceof Error ? error.message : 'Не удалось открыть настройки уведомлений')
+						})
 					},
 				},
 			],
 		)
-	}, [workouts])
+	}, [showError, workouts])
 
 	const handleComplete = async (
 		setId: string,

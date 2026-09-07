@@ -4,7 +4,7 @@
  * Local notifications work in Expo Go on Android; remote push does not
  * (SDK 53+). Production/dev builds are still preferred for QA.
  */
-import { Platform } from 'react-native'
+import { NativeModules, Platform } from 'react-native'
 import * as Notifications from 'expo-notifications'
 
 import type {
@@ -45,6 +45,19 @@ function mapPermission (
 }
 
 export class ExpoRestNotificationClient implements RestNotificationClient {
+	async needsExactAlarmAccess (): Promise<boolean> {
+		if (Platform.OS !== 'android' || Number(Platform.Version) < 31) {
+			return false
+		}
+		return !(await NativeModules.RestAlarmAccess.canScheduleExactAlarms())
+	}
+
+	async requestExactAlarmAccess (): Promise<void> {
+		if (await this.needsExactAlarmAccess()) {
+			await NativeModules.RestAlarmAccess.requestExactAlarmAccess()
+		}
+	}
+
 	async ensureChannel (): Promise<void> {
 		configureRestNotificationHandler()
 		if (Platform.OS !== 'android') {
@@ -57,12 +70,17 @@ export class ExpoRestNotificationClient implements RestNotificationClient {
 			importance: Notifications.AndroidImportance.HIGH,
 			vibrationPattern: [0, 250, 150, 250],
 			enableVibrate: true,
-			sound: 'default',
+			// Omit sound to use Android's default; SDK 57 treats strings as raw filenames.
 		})
 	}
 
 	async getPermissionStatus (): Promise<PermissionStatus> {
 		const current = await Notifications.getPermissionsAsync()
+		// Android 13+ can report denied before the first request because
+		// notifications are not enabled yet. canAskAgain identifies a requestable state.
+		if (current.status === 'denied' && current.canAskAgain) {
+			return 'undetermined'
+		}
 		return mapPermission(current.status)
 	}
 

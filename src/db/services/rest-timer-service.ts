@@ -36,6 +36,7 @@ const REST_NOTIFICATION_PREFIX = 'rest-timer:'
 
 export class RestTimerService {
 	private permissionPromptPending = false
+	private permissionPromptConsumed = false
 	readonly workouts: WorkoutRepository
 
 	constructor (
@@ -48,6 +49,9 @@ export class RestTimerService {
 	consumePermissionPromptNeeded (): boolean {
 		const value = this.permissionPromptPending
 		this.permissionPromptPending = false
+		if (value) {
+			this.permissionPromptConsumed = true
+		}
 		return value
 	}
 
@@ -60,6 +64,7 @@ export class RestTimerService {
 		if (active?.restEndsAt && active.restNotificationId) {
 			await this.ensureScheduled(active)
 		}
+		await this.notifications.requestExactAlarmAccess?.()
 	}
 
 	/**
@@ -258,7 +263,9 @@ export class RestTimerService {
 		await this.notifications.ensureChannel()
 		const status = await this.notifications.getPermissionStatus()
 		let permissionPromptNeeded = false
-		if (status === 'undetermined') {
+		const needsExactAccess = status === 'granted'
+			&& await this.notifications.needsExactAlarmAccess?.()
+		if ((status === 'undetermined' || needsExactAccess) && !this.permissionPromptConsumed) {
 			permissionPromptNeeded = true
 			this.permissionPromptPending = true
 		}

@@ -15,6 +15,8 @@ export interface RestNotificationClient {
 	ensureChannel (): Promise<void>
 	getPermissionStatus (): Promise<PermissionStatus>
 	requestPermission (): Promise<PermissionStatus>
+	needsExactAlarmAccess? (): Promise<boolean>
+	requestExactAlarmAccess? (): Promise<void>
 	schedule (input: ScheduleRestNotificationInput): Promise<string>
 	cancel (identifier: string): Promise<void>
 }

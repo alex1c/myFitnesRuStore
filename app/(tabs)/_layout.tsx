@@ -4,6 +4,7 @@
 import { SymbolView } from 'expo-symbols'
 import { Tabs } from 'expo-router'
 import { Platform } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { useThemeColors } from '@/src/theme/use-theme-colors'
 import { typography } from '@/src/theme'
@@ -34,6 +35,7 @@ function toColorString (color: string | { toString: () => string }): string {
 
 export default function TabLayout () {
 	const palette = useThemeColors()
+	const insets = useSafeAreaInsets()
 
 	return (
 		<Tabs
@@ -52,8 +54,8 @@ export default function TabLayout () {
 				tabBarStyle: {
 					backgroundColor: palette.tabBar,
 					borderTopColor: palette.border,
-					height: Platform.OS === 'android' ? 64 : 84,
-					paddingBottom: Platform.OS === 'android' ? 10 : 24,
+					height: Platform.OS === 'android' ? 64 + insets.bottom : 84,
+					paddingBottom: Platform.OS === 'android' ? 10 + insets.bottom : 24,
 					paddingTop: 8,
 				},
 				tabBarLabelStyle: {
