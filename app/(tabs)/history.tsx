@@ -8,6 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 
 import { AppText } from '@/src/components/app-text'
 import type { Workout } from '@/src/domain/types'
+import { AppBannerSlot } from '@/src/features/ads/app-banner-slot'
 import {
 	formatExerciseCount,
 	formatSetCount,
@@ -63,6 +64,7 @@ export default function HistoryScreen () {
 						</AppText>
 					</View>
 				}
+				ListFooterComponent={<AppBannerSlot />}
 				renderItem={({ item }) => (
 					<Pressable
 						onPress={() =>

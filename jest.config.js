@@ -7,6 +7,8 @@ module.exports = {
 		'^@/(.*)$': '<rootDir>/$1',
 		'^@appmetrica/react-native-analytics$':
 			'<rootDir>/src/services/analytics/__mocks__/appmetrica.ts',
+		'^yandex-mobile-ads$':
+			'<rootDir>/src/services/ads/__mocks__/yandex-mobile-ads.ts',
 	},
 	transform: {
 		'^.+\\.(ts|tsx)$': [

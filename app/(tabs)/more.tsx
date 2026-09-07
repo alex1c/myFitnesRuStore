@@ -8,6 +8,7 @@ import { ActivityIndicator, Alert, Pressable, StyleSheet, View } from 'react-nat
 import { AppText } from '@/src/components/app-text'
 import { Screen } from '@/src/components/screen'
 import { SurfaceCard } from '@/src/components/surface-card'
+import { AppBannerSlot } from '@/src/features/ads/app-banner-slot'
 import {
 	backupFileName,
 	csvFileName,
@@ -261,6 +262,8 @@ export default function MoreScreen () {
 					Схема данных: {schemaVersion}
 				</AppText>
 			</SurfaceCard>
+
+			<AppBannerSlot />
 		</Screen>
 	)
 }

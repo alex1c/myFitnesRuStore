@@ -1,8 +1,9 @@
 /**
  * Post-finish workout summary with volume and PR count.
+ * Interstitial (if eligible) runs only after the user taps Готово.
  */
 import { useLocalSearchParams, useRouter } from 'expo-router'
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { Pressable, StyleSheet } from 'react-native'
 
 import { AppText } from '@/src/components/app-text'
@@ -15,6 +16,7 @@ import {
 	formatSetCount,
 } from '@/src/features/templates/summary'
 import { useWorkoutService } from '@/src/providers/database-provider'
+import { ads } from '@/src/services/ads'
 import { radius, spacing, touchTarget } from '@/src/theme'
 import { useThemeColors } from '@/src/theme/use-theme-colors'
 
@@ -25,6 +27,7 @@ export default function WorkoutSummaryScreen () {
 	const workouts = useWorkoutService()
 	const [detail, setDetail] = useState<WorkoutDetail | null>(null)
 	const [recordCount, setRecordCount] = useState(0)
+	const [isExiting, setIsExiting] = useState(false)
 
 	useEffect(() => {
 		void (async () => {
@@ -81,6 +84,26 @@ export default function WorkoutSummaryScreen () {
 		).length
 	}, [detail])
 
+	const handleDone = useCallback(async () => {
+		if (isExiting) {
+			return
+		}
+		setIsExiting(true)
+		try {
+			// Ad show is best-effort and never blocks leaving the summary.
+			await ads.showPostWorkoutInterstitial({
+				currentWorkoutCompletedSetCount: completedSets,
+				getActiveWorkout: () => workouts.workouts.getActiveWorkout(),
+				countFinishedWorkouts: () =>
+					workouts.progress.countFinishedWorkouts(null),
+			})
+		} catch {
+			// Ignore — navigation always proceeds.
+		} finally {
+			router.replace('/')
+		}
+	}, [completedSets, isExiting, router, workouts])
+
 	if (!detail || !detail.workout.finishedAt) {
 		return (
 			<Screen>
@@ -115,7 +138,10 @@ export default function WorkoutSummaryScreen () {
 			) : null}
 
 			<Pressable
-				onPress={() => router.replace('/')}
+				disabled={isExiting}
+				onPress={() => {
+					void handleDone()
+				}}
 				style={[styles.primary, { backgroundColor: palette.primary }]}
 			>
 				<AppText variant="subtitle" style={{ color: palette.onPrimary }}>
@@ -123,6 +149,7 @@ export default function WorkoutSummaryScreen () {
 				</AppText>
 			</Pressable>
 			<Pressable
+				disabled={isExiting}
 				onPress={() =>
 					router.replace(`/workout/history/${detail.workout.id}`)
 				}

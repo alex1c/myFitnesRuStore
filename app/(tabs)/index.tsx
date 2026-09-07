@@ -7,6 +7,7 @@ import { Alert, Pressable, StyleSheet, View } from 'react-native'
 
 import { AppText } from '@/src/components/app-text'
 import { Screen } from '@/src/components/screen'
+import { AppBannerSlot } from '@/src/features/ads/app-banner-slot'
 import type { TemplateExercise, Workout, WorkoutTemplate } from '@/src/domain/types'
 import { ActiveWorkoutExistsError } from '@/src/db'
 import { TemplateListCard } from '@/src/features/templates/components/template-list-card'
@@ -264,6 +265,9 @@ export default function TodayScreen () {
 							Архив тренировок
 						</AppText>
 					</Pressable>
+
+					{/* Suppress while loading or active workout — keep logging UX clean. */}
+					<AppBannerSlot suppress={isLoading || !!active} />
 				</>
 			)}
 		</Screen>

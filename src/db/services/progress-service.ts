@@ -154,6 +154,11 @@ export class ProgressService {
 	/**
 	 * Count celebratory PRs achieved by completed sets inside a finished workout.
 	 */
+	/** Lifetime finished workouts — used for ad eligibility after restore. */
+	async countFinishedWorkouts (sinceIso: string | null = null): Promise<number> {
+		return this.progress.countFinishedWorkouts(sinceIso)
+	}
+
 	async countCelebratedRecordsInWorkout (workoutId: string): Promise<number> {
 		const rows = await this.db.getAllAsync<{
 			set_id: string

@@ -15,6 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 
 import { AppText } from '@/src/components/app-text'
 import type { Exercise } from '@/src/domain/types'
+import { AppBannerSlot } from '@/src/features/ads/app-banner-slot'
 import { ExerciseListRow } from '@/src/features/exercises/components/exercise-list-row'
 import {
 	MORE_FILTERS,
@@ -145,6 +146,7 @@ export default function ExercisesScreen () {
 				contentContainerStyle={styles.listContent}
 				ItemSeparatorComponent={() => <View style={{ height: spacing.xs }} />}
 				keyboardShouldPersistTaps="handled"
+				ListFooterComponent={<AppBannerSlot />}
 				ListEmptyComponent={
 					isLoading ? (
 						<AppText muted style={styles.empty}>

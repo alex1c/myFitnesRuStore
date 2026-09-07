@@ -15,6 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { AppText } from '@/src/components/app-text'
 import type { ExerciseHistoryListItem } from '@/src/db/repositories/progress-repository'
 import type { OverallProgressSummary } from '@/src/db/services/progress-service'
+import { AppBannerSlot } from '@/src/features/ads/app-banner-slot'
 import {
 	formatVolumeKg,
 	type ProgressPeriodDays,
@@ -184,6 +185,7 @@ export default function ProgressScreen () {
 				ItemSeparatorComponent={() => (
 					<View style={{ height: spacing.sm }} />
 				)}
+				ListFooterComponent={<AppBannerSlot />}
 				renderItem={({ item }) => (
 					<Pressable
 						onPress={() =>

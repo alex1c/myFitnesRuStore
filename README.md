@@ -194,6 +194,29 @@ Product analytics (AppMetrica only — no ads):
 
 Not in Phase 9: Yandex Mobile Ads, banners, interstitial.
 
+## Phase 10
+
+Yandex Mobile Ads monetization (safe placement):
+
+- package: `yandex-mobile-ads` **8.4.0** (official RN plugin)
+- production unit IDs in `src/services/ads/config.ts` (banner + interstitial only)
+- sticky banner on Today (no active workout), History, Progress, Exercises, More
+- **no banner while an active workout exists** (including Today)
+- post-workout interstitial only after summary → **Готово**
+- eligibility: ≥3 finished workouts in history, current workout has completed sets, max **1 interstitial per app session**
+- hard guard: never show interstitial while `getActiveWorkout()` is set
+- ads are best-effort (offline / load / show failures never block workouts or navigation)
+- no app-open, rewarded, feed, or native ad units in 1.0
+- custom workout content is **not** passed into ad targeting; location consent disabled
+
+`Native Yandex Ads rendering QA pending`.
+
+`Native Android rest notification QA pending`.
+
+Privacy note: Yandex Mobile Ads is used for monetization with standard SDK data processing. A full privacy policy will be finalized in the release phase.
+
+Not in Phase 10: release packaging, RuStore listing copy, privacy policy finalization.
+
 ## Package
 
 - App name: `Мой спортзал`

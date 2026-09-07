@@ -14,6 +14,7 @@ import 'react-native-reanimated'
 
 import { DatabaseProvider } from '@/src/providers/database-provider'
 import { ThemePreferenceProvider } from '@/src/providers/theme-preference-provider'
+import { initializeAds } from '@/src/services/ads'
 import { initializeAnalytics } from '@/src/services/analytics'
 import { configureRestNotificationHandler } from '@/src/services/notifications/expo-rest-notification-client'
 import { colors } from '@/src/theme'
@@ -28,6 +29,8 @@ export const unstable_settings = {
 SplashScreen.preventAutoHideAsync()
 configureRestNotificationHandler()
 initializeAnalytics()
+// Best-effort ads init — must not race or block AppMetrica / DB bootstrap.
+initializeAds()
 
 const LightNavTheme = {
 	...DefaultTheme,
