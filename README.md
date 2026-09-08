@@ -241,6 +241,27 @@ Release identity:
 
 Not in Phase 12A: AAB signing / store upload (Phase 12B).
 
+## Phase 12B
+
+Local production Android App Bundle:
+
+- signed release AAB: `release-artifacts/my-fitness-1.0.0-v1.aab`
+- keystore kept outside the repository (never committed)
+- store icon: `release-artifacts/store-icon.png`
+
+Not in Phase 12B: RuStore listing screenshots (Phase 12C).
+
+## Phase 12C screenshot standard
+
+RuStore screenshots must be:
+
+- portrait
+- 9:16
+- 1080×1920
+- PNG
+
+Do not use 1080×2424, 20:9, or arbitrary emulator aspect ratios.
+
 ## Package
 
 - App name: `Мой спортзал`
