@@ -73,3 +73,7 @@ temp/
 .qa-screenshots/
 screenshots/tmp/
 release-artifacts/local/
+
+# Local signed store bundles (kept on disk, not committed)
+release-artifacts/*.aab
+
