@@ -4,7 +4,14 @@
 import Constants from 'expo-constants'
 import { useRouter } from 'expo-router'
 import React, { useCallback, useState } from 'react'
-import { ActivityIndicator, Alert, Pressable, StyleSheet, View } from 'react-native'
+import {
+	ActivityIndicator,
+	Alert,
+	Linking,
+	Pressable,
+	StyleSheet,
+	View,
+} from 'react-native'
 
 import { AppText } from '@/src/components/app-text'
 import { Screen } from '@/src/components/screen'
@@ -21,6 +28,11 @@ import {
 	shareFile,
 	writeCacheTextFile,
 } from '@/src/features/backup/file-io'
+import {
+	PRIVACY_POLICY_URL,
+	SUPPORT_EMAIL,
+	SUPPORT_MAILTO_URL,
+} from '@/src/features/settings/release-identity'
 import {
 	THEME_PREFERENCES,
 	THEME_PREFERENCE_LABELS,
@@ -190,6 +202,36 @@ export default function MoreScreen () {
 		}
 	}, [backup, busy])
 
+	const handleContactDeveloper = useCallback(async () => {
+		try {
+			const canOpen = await Linking.canOpenURL(SUPPORT_MAILTO_URL)
+			if (!canOpen) {
+				Alert.alert(
+					'Нет почтового приложения',
+					`Напишите на ${SUPPORT_EMAIL}`,
+				)
+				return
+			}
+			await Linking.openURL(SUPPORT_MAILTO_URL)
+		} catch {
+			Alert.alert(
+				'Не удалось открыть почту',
+				`Напишите на ${SUPPORT_EMAIL}`,
+			)
+		}
+	}, [])
+
+	const handleOpenPrivacy = useCallback(async () => {
+		try {
+			await Linking.openURL(PRIVACY_POLICY_URL)
+		} catch {
+			Alert.alert(
+				'Не удалось открыть ссылку',
+				PRIVACY_POLICY_URL,
+			)
+		}
+	}, [])
+
 	return (
 		<Screen scroll>
 			<AppText variant="title">Ещё</AppText>
@@ -275,6 +317,22 @@ export default function MoreScreen () {
 				<AppText variant="caption" muted>
 					Схема данных: {schemaVersion}
 				</AppText>
+				<ActionRow
+					title="Связаться с разработчиком"
+					subtitle={SUPPORT_EMAIL}
+					disabled={busy}
+					onPress={() => {
+						void handleContactDeveloper()
+					}}
+				/>
+				<ActionRow
+					title="Политика конфиденциальности"
+					subtitle={PRIVACY_POLICY_URL}
+					disabled={busy}
+					onPress={() => {
+						void handleOpenPrivacy()
+					}}
+				/>
 			</SurfaceCard>
 
 			<AppBannerSlot />

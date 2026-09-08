@@ -213,9 +213,9 @@ Yandex Mobile Ads monetization (safe placement):
 
 `Native Android rest notification QA pending`.
 
-Privacy note: Yandex Mobile Ads is used for monetization with standard SDK data processing. A full privacy policy will be finalized in the release phase.
+Privacy note: Yandex Mobile Ads is used for monetization with standard SDK data processing. Privacy policy: `docs/privacy.html`.
 
-Not in Phase 10: release packaging, RuStore listing copy, privacy policy finalization.
+Not in Phase 10: release packaging, RuStore listing copy (later phases).
 
 ## Phase 11
 
@@ -230,8 +230,21 @@ Product standard: main scenarios must be explainable to a beginner inside the ap
 
 Not in Phase 11: release packaging, new product features beyond the guide.
 
+## Phase 12A
+
+Release identity:
+
+- production support email in «Ещё → О приложении»
+- privacy policy (`docs/privacy.html`, GitHub Pages `/docs`)
+- approved launcher/store icon from `assets/icon_gpt.png`
+- release-artifacts scaffold (`store-icon.png`)
+
+Not in Phase 12A: AAB signing / store upload (Phase 12B).
+
 ## Package
 
 - App name: `Мой спортзал`
 - Android package: `com.calculatorplatform.myfitness`
 - Version: `1.0.0` (versionCode `1`)
+- Support: `rustore-alex1c@yandex.ru`
+- Privacy: `https://alex1c.github.io/myFitnesRuStore/privacy.html`
