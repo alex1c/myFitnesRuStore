@@ -1,0 +1,25 @@
+App:
+Мой спортзал
+
+Package:
+com.calculatorplatform.myfitness
+
+Version:
+1.0.0
+
+versionCode:
+1
+
+Support:
+rustore-alex1c@yandex.ru
+
+Privacy:
+https://alex1c.github.io/myFitnesRuStore/privacy.html
+
+Signed AAB:
+ALREADY BUILT AND VERIFIED ON LOCAL RELEASE MACHINE
+
+Expected local-only path:
+D:\petProject\myFitnesRuStore\release-artifacts\my-fitness-1.0.0-v1.aab
+
+Do not search for it on remote machine.
