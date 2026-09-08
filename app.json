@@ -35,6 +35,7 @@
     },
     "plugins": [
       "./plugins/with-rest-alarm-access",
+      "./plugins/with-production-abis",
       "expo-router",
       [
         "expo-splash-screen",
